@@ -81,19 +81,19 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Get all documents belonging to this user through parent info
+     * Get parent-level documents for this user
      */
     public function documents()
     {
-        return $this->hasManyThrough(Document::class, ParentInfo::class, 'user_id', 'parent_id');
+        return $this->hasMany(Document::class, 'reference_id')
+            ->where('reference_type', 'parent');
     }
 
     /**
-     * Get parent-level documents only
+     * Alias for documents() for clearer semantics
      */
     public function parentDocuments()
     {
-        return $this->hasManyThrough(Document::class, ParentInfo::class, 'user_id', 'parent_id')
-            ->whereNull('application_id');
+        return $this->documents();
     }
 }

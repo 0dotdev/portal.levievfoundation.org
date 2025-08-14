@@ -134,4 +134,25 @@ trait CommonTrait
             '2026-2027' => '2026-2027',
         ];
     }
+
+    static function applicationStatus(): array
+    {
+        return [
+            'submitted' => 'Submitted',
+            'approved' => 'Approved',
+            'rejected' => 'Rejected',
+            'fix_needed' => 'Fix Needed',
+            'resubmitted' => 'Resubmitted',
+        ];
+    }
+    static function applicationColors(): array
+    {
+        return [
+            'primary' => 'submitted',
+            'success' => 'approved',
+            'danger' => 'rejected',
+            'warning' => 'fix_needed',
+            'info' => 'resubmitted',
+        ];
+    }
 }

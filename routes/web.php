@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\GoogleDriveTokenController;
 
 Route::get('/', function () {
-    Log::info('Test log');
     return redirect(route('filament.dashboard.auth.register'));
 });
 

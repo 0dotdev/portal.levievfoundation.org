@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Widgets;
 
 use App\Filament\Resources\Admin\ApplicationResource;
+use App\Traits\CommonTrait;
 use Carbon\Carbon;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -11,7 +12,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentApplications extends BaseWidget
 {
-    
+    use CommonTrait;
+
     protected static ?string $heading = 'Recent Applications';
 
     protected static bool $isLazy = false;
@@ -35,30 +37,27 @@ class RecentApplications extends BaseWidget
 
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
-                Tables\Columns\TextColumn::make('first_name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('date_of_birth')->searchable(),
-                Tables\Columns\TextColumn::make('gender')->searchable(),
-                Tables\Columns\TextColumn::make('current_school_name')->searchable(),
-                Tables\Columns\TextColumn::make('current_grade')->searchable(),
-                Tables\Columns\BadgeColumn::make('status')
-                    ->formatStateUsing(fn($state) => [
-                        'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
-                        'fix_needed' => 'Fix Needed',
-                        'resubmitted' => 'Resubmitted',
-                    ][$state] ?? $state)
-                    ->colors([
-                        'primary' => 'pending',
-                        'success' => 'approved',
-                        'danger' => 'rejected',
-                        'warning' => 'fix_needed',
-                        'info' => 'resubmitted',
-                    ])
+                TextColumn::make('first_name')
+                    ->label('Child Name')
+                    ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
+                    ->searchable(['first_name', 'last_name']),
+                TextColumn::make('date_of_birth')->searchable(),
+                TextColumn::make('gender')->searchable()->formatStateUsing(fn($state) => self::genders()[$state] ?? $state),
+                TextColumn::make('parent.father_first_name')
+                    ->label('Father Name')
+                    ->formatStateUsing(fn($record) => $record->parent->father_first_name  . ' ' . $record->parent->father_last_name),
+                TextColumn::make('parent.mother_first_name')
+                    ->label('Mother Name')
+                    ->formatStateUsing(fn($record) => $record->parent->mother_first_name  . ' ' . $record->parent->mother_last_name),
+
+                TextColumn::make('current_school_name')->label('Current School')->description(fn($record): string => $record->current_school_location)->searchable(),
+                TextColumn::make('current_grade')->searchable(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->formatStateUsing(fn($state) => self::applicationStatus()[$state] ?? $state)
+                    ->colors(self::applicationColors())
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ]);
     }
-
-
 }

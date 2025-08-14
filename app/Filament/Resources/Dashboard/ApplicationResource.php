@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Dashboard;
 
 use App\Filament\Resources\Dashboard\ApplicationResource\Pages;
-use App\Filament\Resources\Dashboard\ApplicationResource\RelationManagers;
 use App\Models\Application;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -23,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use App\Notifications\ApplicationStatusNotification;
 use App\Models\User;
+use App\Models\Document;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 use Filament\Forms\Components\Checkbox;
@@ -39,24 +39,30 @@ use Saade\FilamentAutograph\Forms\Components\SignaturePad;
 use Illuminate\Support\Facades\Storage;
 use App\Services\GoogleDriveService;
 use App\Traits\CommonTrait;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
+use Filament\Infolists\Components\TextEntry;
+use Illuminate\Support\HtmlString;
 
 class ApplicationResource extends Resource
 {
-
     use CommonTrait;
+
     protected static ?string $model = Application::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $slug = 'applications';
 
+    protected static ?string $recordTitleAttribute = 'first_name';
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['parent']);
+    }
 
     public static function form(Form $form): Form
     {
-        // Always refresh token before showing the form
-        app(\App\Http\Controllers\GoogleDriveTokenController::class)->refreshAccessToken();
         return $form
             ->schema([
                 Wizard::make([
@@ -68,7 +74,12 @@ class ApplicationResource extends Resource
                             ->schema([
                                 TextInput::make('father_first_name')->label('First Name')->required(),
                                 TextInput::make('father_last_name')->label('Last Name')->required(),
-                                TextInput::make('father_phone')->label('Phone')->required()->tel(),
+                                TextInput::make('father_phone')
+                                    ->label('Phone')
+                                    ->mask('(999) 999-9999')
+                                    ->placeholder('')
+                                    ->required()
+                                    ->tel(),
                                 TextInput::make('father_email')->label('Email')->email()->required(),
                                 Fieldset::make('Address')
                                     ->schema([
@@ -86,12 +97,17 @@ class ApplicationResource extends Resource
                         ])->schema([
                             TextInput::make('mother_first_name')->label('First Name')->required(),
                             TextInput::make('mother_last_name')->label('Last Name')->required(),
-                            TextInput::make('mother_phone')->label('Phone')->required()->tel(),
+                            TextInput::make('mother_phone')->label('Phone')
+                                ->mask('(999) 999-9999')
+                                ->placeholder('')
+                                ->required()
+                                ->tel(),
                             TextInput::make('mother_email')->label('Email')->email()->required(),
                             Checkbox::make('mother_has_different_address')->label('Mother has a different address?')->reactive(),
                             Fieldset::make('Address')
                                 ->schema([
-                                    TextInput::make('mother_address')->label('Street Address')->required(),
+                                    TextInput::make('mother_address')->label('Street Address')->required()
+                                        ->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                                     TextInput::make('mother_city')->label('City')->required(),
                                     Select::make('mother_state')->label('State')->options(self::states())->required(),
                                     TextInput::make('mother_pincode')->label('Pincode')->required(),
@@ -104,7 +120,7 @@ class ApplicationResource extends Resource
                         ])->schema([
                             Select::make('family_status')
                                 ->options(self::familyStatuses())
-                                ->required(),
+                                ->required()->default('married'),
                             Select::make('no_of_children_in_household')->label('Number of children in household')->options(self::householdChildren())->required(),
                             TextInput::make('synagogue_affiliation')
                                 ->placeholder(' Please enter name and address.')
@@ -129,21 +145,17 @@ class ApplicationResource extends Resource
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
                                     Select::make('school_wish_to_apply_in')->label('Schools Wish to Apply In')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
-                                    Select::make('attended_school_past_year')
-                                        ->label('Is applicant has attended school in the past year.')
-                                        ->options(['yes' => 'Yes', 'no' => 'No'])
-                                        ->required(),
+                                    Checkbox::make('attended_school_past_year')
+                                        ->label('Is applicant has attended school in the past year.'),
                                     FileUpload::make('recent_report_card')
                                         ->label('2 Years School Report Card')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
                                         ->maxFiles(2)
-                                        ->previewable(false)
-                                        ->directory('imgs/docs')
+                                        ->directory('documents/report-cards')
                                         ->visibility('private')
-                                        ->required()
-                                        ->disk('google'),
+                                        ->required(),
 
                                 ])->columns(3)->visible(fn(callable $get) => $get('is_applying_for_grant'))->columnSpanFull(),
                             ])->defaultItems(fn(callable $get) => (int) $get('no_of_children_in_household') ?: 1)
@@ -157,77 +169,32 @@ class ApplicationResource extends Resource
                                         ->label('Government ID')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
-                                        ->directory('imgs/docs')
-                                        ->visibility('private')
+                                        ->multiple()
+                                        ->maxFiles(2)
+                                        ->previewable(false)
+                                        ->directory('documents/government_id')
                                         ->required()
-                                        ->enableDownload()
-                                        ->enableOpen()
-                                        ->disk('google')
-                                        ->saveUploadedFileUsing(function ($file, $record) {
-                                            $path = 'imgs/docs/' . $file->getClientOriginalName();
-                                            $stream = fopen($file->getRealPath(), 'r');
-                                            Log::info('Uploading to Google Drive', ['path' => $path]);
-                                            try {
-                                                app(GoogleDriveService::class)->writeStreamWithRetry($path, $stream);
-                                                Log::info('Upload success', ['path' => $path]);
-                                            } catch (\Exception $e) {
-                                                Log::error('Upload failed', ['error' => $e->getMessage()]);
-                                            }
-                                            if (is_resource($stream)) {
-                                                fclose($stream);
-                                            }
-                                            return $path;
-                                        }),
+                                        ->visibility('private'),
                                     FileUpload::make('marriage_certificate')
                                         ->label('Ketuba/Jewish Marriage Certificate')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
-                                        ->directory('imgs/docs')
-                                        ->visibility('private')
+                                        ->multiple()
+                                        ->maxFiles(2)
+                                        ->previewable(false)
+                                        ->directory('documents/marriage_certificate')
                                         ->required()
-                                        ->enableDownload()
-                                        ->enableOpen()
-                                        ->disk('google')
-                                        ->saveUploadedFileUsing(function ($file, $record) {
-                                            $path = 'imgs/docs/' . $file->getClientOriginalName();
-                                            $stream = fopen($file->getRealPath(), 'r');
-                                            Log::info('Uploading to Google Drive', ['path' => $path]);
-                                            try {
-                                                app(GoogleDriveService::class)->writeStreamWithRetry($path, $stream);
-                                                Log::info('Upload success', ['path' => $path]);
-                                            } catch (\Exception $e) {
-                                                Log::error('Upload failed', ['error' => $e->getMessage()]);
-                                            }
-                                            if (is_resource($stream)) {
-                                                fclose($stream);
-                                            }
-                                            return $path;
-                                        }),
+                                        ->visibility('private'),
                                     FileUpload::make('recent_utility_bill')
                                         ->label('Recent Utility Bill (Electric, Gas or Cable Bill)')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
-                                        ->directory('imgs/docs')
-                                        ->visibility('private')
+                                        ->multiple()
+                                        ->maxFiles(2)
                                         ->required()
-                                        ->enableDownload()
-                                        ->enableOpen()
-                                        ->disk('google')
-                                        ->saveUploadedFileUsing(function ($file, $record) {
-                                            $path = 'imgs/docs/' . $file->getClientOriginalName();
-                                            $stream = fopen($file->getRealPath(), 'r');
-                                            Log::info('Uploading to Google Drive', ['path' => $path]);
-                                            try {
-                                                app(GoogleDriveService::class)->writeStreamWithRetry($path, $stream);
-                                                Log::info('Upload success', ['path' => $path]);
-                                            } catch (\Exception $e) {
-                                                Log::error('Upload failed', ['error' => $e->getMessage()]);
-                                            }
-                                            if (is_resource($stream)) {
-                                                fclose($stream);
-                                            }
-                                            return $path;
-                                        }),
+                                        ->previewable(false)
+                                        ->directory('documents/recent_utility_bill')
+                                        ->visibility('private')
                                 ]),
                             ]
                             : [
@@ -236,21 +203,12 @@ class ApplicationResource extends Resource
                                         ->label('Government ID')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
-                                        ->directory('imgs/docs')
+                                        ->multiple()
+                                        ->maxFiles(2)
+                                        ->previewable(false)
+                                        ->directory('documents')
                                         ->visibility('private')
-                                        ->required()
-                                        ->enableDownload()
-                                        ->enableOpen()
-                                        ->disk('google')
-                                        ->saveUploadedFileUsing(function ($file, $record) {
-                                            $path = 'imgs/docs/' . $file->getClientOriginalName();
-                                            $stream = fopen($file->getRealPath(), 'r');
-                                            app(GoogleDriveService::class)->writeStreamWithRetry($path, $stream);
-                                            if (is_resource($stream)) {
-                                                fclose($stream);
-                                            }
-                                            return $path;
-                                        }),
+                                        ->required(),
                                     Group::make([
                                         Select::make('status_government_id')
                                             ->label('Government ID Status')
@@ -393,28 +351,31 @@ class ApplicationResource extends Resource
 
                         Checkbox::make('info_is_true')
                             ->label('I declare that all information provided is true and accurate.')
+                            ->rule('accepted')
                             ->required(),
                         Checkbox::make('applicants_are_jewish')
                             ->label('I declare that the applicants are Jewish.')
+                            ->rule('accepted')
                             ->required(),
                         Checkbox::make('parent_is_of_bukharian_descent')
                             ->label('I declare that at least one parent is of Bukharian descent.')
+                            ->rule('accepted')
                             ->required(),
                         Group::make([
                             Textarea::make('additional_notes')
                                 ->label('Additional Notes')
                                 ->nullable()
-                                ->rows(2)
+                                ->rows(4)
                                 ->maxLength(500),
-                            DatePicker::make('declearation_date')
+                            DatePicker::make('declaration_date')
                                 ->label('Declaration Date')
                                 //Auto fill with current date
                                 ->default(now())
                                 ->columns(2)
                                 ->required(),
-                            SignaturePad::make('declearation_signature')
+                            SignaturePad::make('declaration_signature')
                                 ->label('Declaration Signature')
-                                ->extraAttributes(['style' => 'width:220px; height:80px;'])
+                                ->extraAttributes(['style' => 'width:220px; height:90px;'])
                                 ->backgroundColor('rgba(255,255,255,1)')
                                 ->penColor('#222')
                                 ->dotSize(0.7)
@@ -428,8 +389,7 @@ class ApplicationResource extends Resource
 
 
                     ]),
-                ])->skippable()
-                    ->columnSpanFull(),
+                ])->columnSpanFull(),
             ]);
     }
 
@@ -439,39 +399,212 @@ class ApplicationResource extends Resource
             ->recordUrl(null)
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
-                TextColumn::make('first_name')->searchable()->sortable(),
-                TextColumn::make('date_of_birth')->searchable()->sortable(),
-                TextColumn::make('gender')->searchable()->sortable(),
-                TextColumn::make('current_school_name')->searchable()->sortable(),
-                TextColumn::make('current_school_location')->searchable()->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
-                    ->formatStateUsing(fn($state) => [
-                        'submitted' => 'Submitted',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
-                        'fix_needed' => 'Fix Needed',
-                        'resubmitted' => 'Resubmitted',
-                    ][$state] ?? $state)
-                    ->colors([
-                        'primary' => 'submitted',
-                        'success' => 'approved',
-                        'danger' => 'rejected',
-                        'warning' => 'fix_needed',
-                        'info' => 'resubmitted',
-                    ])
-                    ->sortable(),
+                TextColumn::make('first_name')
+                    ->label('Name')
+                    ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
+                    ->searchable(['first_name', 'last_name']),
+                TextColumn::make('date_of_birth')->searchable(),
+                TextColumn::make('gender')->searchable()->formatStateUsing(fn($state) => self::genders()[$state] ?? $state),
+                TextColumn::make('current_school_name')->label('Current School')->description(fn($record): string => $record->current_school_location)->searchable(),
+                TextColumn::make('current_grade')->searchable(),
+                TextColumn::make('is_applying_for_grant')->label('Applying for Grant?')
+                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                    ->searchable(),
+                TextColumn::make('created_at')
+                    ->label('Created At')
+                    ->date()
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->formatStateUsing(fn($state) => self::applicationStatus()[$state] ?? $state)
+                    ->colors(self::applicationColors()),
 
             ])->defaultSort('created_at', 'desc')
-            ->filters([
-                //
-            ])
-            ->actions([
+            ->filters([])->actions([
                 Tables\Actions\EditAction::make()
                     ->visible(
                         fn($record) =>
-                        $record->user_id === auth()->id() &&
+                        $record->user_id === \Illuminate\Support\Facades\Auth::id() &&
                             $record->status === 'fix_needed'
                     ),
+                Tables\Actions\ViewAction::make()
+                    ->form([
+                        Section::make('Applicant Information')
+                            ->schema([
+                                TextInput::make('first_name')
+                                    ->label('Full Name')
+                                    ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
+                                    ->disabled(),
+                                TextInput::make('date_of_birth')
+                                    ->disabled(),
+                                TextInput::make('gender')
+                                    ->formatStateUsing(fn($state) => ucfirst($state))
+                                    ->disabled(),
+                                TextInput::make('current_school_name')
+                                    ->label('Current School')
+                                    ->formatStateUsing(fn($record) => $record->current_school_name . ' (' . $record->current_school_location . ')')
+                                    ->disabled(),
+                                TextInput::make('current_grade')
+                                    ->disabled(),
+                            ])->columns(3),
+
+                        Section::make('Application Details')
+                            ->schema([
+                                TextInput::make('school_year_applying_for')
+                                    ->label('Applying for Year')
+                                    ->disabled(),
+                                TextInput::make('is_applying_for_grant')
+                                    ->label('Applying for Grant')
+                                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                                    ->disabled(),
+                                TextArea::make('school_wish_to_apply_in')
+                                    ->label('Applying for School')
+                                    ->formatStateUsing(function ($state) {
+                                        $decoded = json_decode($state, true);
+                                        return is_array($decoded) ? implode(', ', $decoded) : $state;
+                                    })
+                                    ->disabled(),
+                                TextInput::make('attended_school_past_year')
+                                    // ->label('attended_school_past_year')
+                                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                                    ->disabled(),
+                                TextInput::make('status')
+                                    ->formatStateUsing(fn($state) => ucfirst($state))
+                                    ->disabled(),
+                            ])->columns(3),
+                        Section::make('Student Documents')
+                            ->schema([
+                                Repeater::make('documents')
+                                    ->relationship('documents', fn(Builder $query) => $query->where('reference_type', 'child'))
+                                    ->schema([
+                                        Grid::make(3)
+                                            ->schema([
+                                                Select::make('document_type')
+                                                    ->options([
+                                                        'school_report_card_2_years' => 'School Report Card (2 Years)'
+                                                    ])
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->suffixAction(
+                                                        Action::make('preview')
+                                                            ->icon('heroicon-m-eye')
+                                                            ->label('Preview Document')
+                                                            ->url(fn($record) => $record?->getPreviewUrl())
+                                                            ->openUrlInNewTab()
+                                                            ->visible(fn($record) => $record?->getPreviewUrl() !== null)
+                                                    ),
+                                                Select::make('status')
+                                                    ->options([
+                                                        'pending' => 'Pending Review',
+                                                        'approved' => 'Approved',
+                                                        'rejected' => 'Rejected'
+                                                    ])
+                                                    ->required(),
+                                            ]),
+
+                                    ])
+                                    ->columns(2)
+                                    ->addable(false)
+                                    ->deletable(false)
+                                    ->reorderable(false),
+                            ]),
+
+                        Section::make('Parent Documents')
+                            ->schema([
+                                Repeater::make('parentDocuments')
+                                    ->relationship('parentDocuments')
+                                    ->schema([
+                                        Grid::make(3)
+                                            ->schema([
+                                                Select::make('document_type')
+                                                    ->options([
+                                                        'government_id' => 'Government ID',
+                                                        'marriage_certificate' => 'Marriage Certificate',
+                                                        'recent_utility_bill' => 'Recent Utility Bill'
+                                                    ])
+                                                    ->disabled()
+                                                    ->dehydrated(false)
+                                                    ->suffixAction(
+                                                        Action::make('preview')
+                                                            ->icon('heroicon-m-eye')
+                                                            ->label('Preview Document')
+                                                            ->url(fn($record) => $record?->getPreviewUrl())
+                                                            ->openUrlInNewTab()
+                                                            ->visible(fn($record) => $record?->getPreviewUrl() !== null)
+                                                    ),
+                                                Select::make('status')
+                                                    ->options([
+                                                        'pending' => 'Pending Review',
+                                                        'approved' => 'Approved',
+                                                        'rejected' => 'Rejected'
+                                                    ])
+                                                    ->required()
+                                            ]),
+                                    ])
+                                    ->columns(1)
+                                    ->addable(false)
+                                    ->deletable(false)
+                                    ->reorderable(false)
+
+                            ]),
+                        Section::make('Parent Information')
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    Group::make([
+                                        TextInput::make('parent.father_first_name')
+                                            ->label('Father Name')
+                                            ->formatStateUsing(fn($record) => $record->parent->father_first_name . ' ' . $record->parent->father_last_name)
+                                            ->disabled(),
+                                        TextInput::make('parent.father_phone')
+                                            ->formatStateUsing(fn($record) => $record->parent->father_phone)
+                                            ->disabled(),
+                                        TextInput::make('parent.father_email')
+                                            ->formatStateUsing(fn($record) => $record->parent->father_email)
+                                            ->disabled(),
+                                        TextInput::make('parent.father_address')
+                                            ->label('Address')
+                                            ->formatStateUsing(fn($record) =>
+                                            $record->parent->father_address . ', ' .
+                                                $record->parent->father_city . ', ' .
+                                                $record->parent->father_state . ' ' .
+                                                $record->parent->father_pincode)
+                                            ->disabled(),
+                                    ]),
+                                    Group::make([
+                                        TextInput::make('parent.mother_first_name')
+                                            ->label('Mother Name')
+                                            ->formatStateUsing(fn($record) => $record->parent->mother_first_name . ' ' . $record->parent->mother_last_name)
+                                            ->disabled(),
+                                        TextInput::make('parent.mother_phone')
+                                            ->formatStateUsing(fn($record) => $record->parent->mother_phone)
+                                            ->disabled(),
+                                        TextInput::make('parent.mother_email')
+                                            ->formatStateUsing(fn($record) => $record->parent->mother_email)
+                                            ->disabled(),
+                                        TextInput::make('parent.mother_address')
+                                            ->label('Address')
+                                            ->formatStateUsing(fn($record) =>
+                                            $record->parent->mother_has_different_address ?
+                                                $record->parent->mother_address . ', ' .
+                                                $record->parent->mother_city . ', ' .
+                                                $record->parent->mother_state . ' ' .
+                                                $record->parent->mother_pincode
+                                                : 'Same as Father')
+                                            ->disabled(),
+                                    ]),
+                                    TextInput::make('parent.family_status')
+                                        ->label('Family Status')
+                                        ->formatStateUsing(fn($record) => ucfirst($record->parent->family_status))
+                                        ->disabled(),
+                                    TextInput::make('parent.synagogue_affiliation')
+                                        ->label('Synagogue Affiliation')
+                                        ->formatStateUsing(fn($record) => $record->parent->synagogue_affiliation)
+                                        ->disabled(),
+                                ]),
+
+                            ]),
+                    ]),
             ])
             ->bulkActions([]);
     }

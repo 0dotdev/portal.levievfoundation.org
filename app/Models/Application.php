@@ -3,22 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Application extends Model
 {
     protected $fillable = [
-        'parent_id',
-        'child_first_name',
-        'child_last_name',
-        'child_date_of_birth',
-        'child_gender',
+        'user_id',
+        'first_name',
+        'last_name',
+        'date_of_birth',
+        'gender',
         'current_school_name',
         'current_school_location',
         'current_grade',
         'school_year_applying_for',
         'school_wish_to_apply_in',
         'is_applying_for_grant',
-        'child_attended_school_past_year',
+        'attended_school_past_year',
         'status',
         'additional_notes',
         'admin_comments',
@@ -30,26 +31,33 @@ class Application extends Model
     protected $casts = [
         'school_wish_to_apply_in' => 'array',
         'is_applying_for_grant' => 'boolean',
-        'child_attended_school_past_year' => 'boolean',
+        'attended_school_past_year' => 'boolean',
         'child_date_of_birth' => 'date',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
 
     /**
-     * Get the parent that owns this application
-     */
-    public function parent()
-    {
-        return $this->belongsTo(ParentInfo::class, 'parent_id');
-    }
-
-    /**
-     * Get the user through parent relationship
+     * Get the user that owns this application
      */
     public function user()
     {
-        return $this->hasOneThrough(User::class, ParentInfo::class, 'id', 'id', 'parent_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the parent through user relationship
+     */
+    public function parent()
+    {
+        return $this->hasOneThrough(
+            ParentInfo::class,
+            User::class,
+            'id', // Foreign key on users table
+            'user_id', // Foreign key on parent_infos table
+            'user_id', // Local key on applications table
+            'id' // Local key on users table
+        );
     }
 
 
@@ -58,7 +66,8 @@ class Application extends Model
      */
     public function documents()
     {
-        return $this->hasMany(Document::class, 'application_id');
+        return $this->hasMany(Document::class, 'reference_id')
+            ->where('reference_type', 'child');
     }
 
     /**
@@ -66,7 +75,7 @@ class Application extends Model
      */
     public function parentDocuments()
     {
-        return $this->user->parentDocuments();
+        return $this->user->documents();
     }
 
     /**
@@ -74,10 +83,13 @@ class Application extends Model
      */
     public function allDocuments()
     {
-        $childDocuments = $this->documents;
-        $parentDocuments = $this->user->documents()->whereNull('application_id')->get();
-
-        return $childDocuments->concat($parentDocuments);
+        return Document::where(function ($query) {
+            $query->where('reference_type', 'child')
+                ->where('reference_id', $this->id);
+        })->orWhere(function ($query) {
+            $query->where('reference_type', 'parent')
+                ->where('reference_id', $this->user_id);
+        })->get();
     }
 
     public function getSchoolWishToApplyInAttribute($value)

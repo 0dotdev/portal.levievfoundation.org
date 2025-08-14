@@ -3,13 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Document extends Model
 {
+    public function getPreviewUrl(): ?string
+    {
+        // If using Google Drive (based on your GoogleDriveService)
+        if (str_starts_with($this->file_path, 'drive:')) {
+            $fileId = str_replace('drive:', '', $this->file_path);
+            return "https://drive.google.com/file/d/{$fileId}/preview";
+        }
+
+        // If using local storage
+        if ($this->file_path) {
+            return url(Storage::url($this->file_path));
+        }
+
+        return null;
+    }
     protected $fillable = [
-        'parent_id',
-        'application_id',
+        'reference_type',
+        'reference_id',
         'document_type',
         'document_name',
         'file_path',

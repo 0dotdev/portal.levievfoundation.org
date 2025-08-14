@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class GoogleDriveTokenController extends Controller
@@ -19,6 +20,11 @@ class GoogleDriveTokenController extends Controller
             'client_secret' => $clientSecret,
             'refresh_token' => $refreshToken,
             'grant_type' => 'refresh_token',
+        ]);
+
+        Log::info('Google Drive token refresh response', [
+            'status' => $response->status(),
+            'body' => $response->json(),
         ]);
 
         if (!$response->ok() || !isset($response['access_token'])) {

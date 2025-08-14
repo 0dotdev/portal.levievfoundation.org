@@ -4,26 +4,45 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\ParentInfo;
-use App\Models\NewApplication;
+use App\Models\Application;
 use App\Models\Document;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 
 class ApplicationService
 {
     /**
-     * Create parent info and multiple applications for children
+     * Create applications for family
      */
-    public function createApplicationsForFamily(User $user, array $parentData, array $childrenData): array
+    public function createApplicationsForFamily(User $user, array $formData): array
     {
-        return DB::transaction(function () use ($user, $parentData, $childrenData) {
+        return DB::transaction(function () use ($user, $formData) {
             // Create parent record
-            $parent = $this->createParentInfo($user, $parentData);
+            $parent = $this->createParentInfo($user, $formData);
 
             // Create applications for each child
             $applications = [];
-            foreach ($childrenData as $childData) {
-                $applications[] = $this->createChildApplication($parent, $childData);
+            foreach ($formData['children'] as $childData) {
+                $application = $this->createApplication($user, $childData);
+                $applications[] = $application;
+
+
+                // Handle child documents
+                if (!empty($childData['recent_report_card'])) {
+                    $this->createDocument($application->id, 'child', 'school_report_card_2_years', $childData['recent_report_card']);
+                }
+            }
+
+            // Handle parent documents
+            if (!empty($formData['government_id'])) {
+                $this->createDocument($user->id, 'parent', 'government_id', $formData['government_id']);
+            }
+            if (!empty($formData['marriage_certificate'])) {
+                $this->createDocument($user->id, 'parent', 'marriage_certificate', $formData['marriage_certificate']);
+            }
+            if (!empty($formData['recent_utility_bill'])) {
+                $this->createDocument($user->id, 'parent', 'recent_utility_bill', $formData['recent_utility_bill']);
             }
 
             return [
@@ -34,10 +53,16 @@ class ApplicationService
     }
 
     /**
-     * Create parent information record
+     * Create parent information record if it doesn't exist
      */
     protected function createParentInfo(User $user, array $data): ParentInfo
     {
+        // Check if parent info already exists for this user
+        $existingParentInfo = ParentInfo::where('user_id', $user->id)->first();
+        if ($existingParentInfo) {
+            return $existingParentInfo;
+        }
+
         return ParentInfo::create([
             'user_id' => $user->id,
             'father_first_name' => $data['father_first_name'],
@@ -48,15 +73,13 @@ class ApplicationService
             'mother_last_name' => $data['mother_last_name'],
             'mother_phone' => $data['mother_phone'],
             'mother_email' => $data['mother_email'],
-            'father_address_line_1' => $data['father_address_line_1'],
-            'father_address_line_2' => $data['father_address_line_2'] ?? null,
+            'father_address' => $data['father_address'],
             'father_city' => $data['father_city'],
             'father_state' => $data['father_state'],
             'father_pincode' => $data['father_pincode'],
             'father_country' => $data['father_country'] ?? 'USA',
             'mother_has_different_address' => $data['mother_has_different_address'] ?? false,
-            'mother_address_line_1' => $data['mother_address_line_1'] ?? null,
-            'mother_address_line_2' => $data['mother_address_line_2'] ?? null,
+            'mother_address' => $data['mother_address'] ?? null,
             'mother_city' => $data['mother_city'] ?? null,
             'mother_state' => $data['mother_state'] ?? null,
             'mother_pincode' => $data['mother_pincode'] ?? null,
@@ -75,73 +98,90 @@ class ApplicationService
     /**
      * Create application for a child
      */
-    protected function createChildApplication(ParentInfo $parent, array $childData): NewApplication
+    protected function createApplication(User $user, array $childData)
     {
-        return NewApplication::create([
-            'parent_id' => $parent->id,
-            'child_first_name' => $childData['first_name'],
-            'child_last_name' => $childData['last_name'],
-            'child_date_of_birth' => $childData['date_of_birth'],
-            'child_gender' => $childData['gender'],
+        return Application::create([
+            'user_id' => $user->id,
+            'first_name' => $childData['first_name'],
+            'last_name' => $childData['last_name'],
+            'date_of_birth' => $childData['date_of_birth'],
+            'gender' => $childData['gender'],
             'current_school_name' => $childData['current_school_name'],
             'current_school_location' => $childData['current_school_location'],
             'current_grade' => $childData['current_grade'],
             'school_year_applying_for' => $childData['school_year_applying_for'],
-            'school_wish_to_apply_in' => $childData['school_wish_to_apply_in'],
+            'school_wish_to_apply_in' => json_encode($childData['school_wish_to_apply_in'] ?? []),
             'is_applying_for_grant' => $childData['is_applying_for_grant'] ?? true,
-            'applicant_has_attended_school_in_past_year' => $childData['applicant_has_attended_school_in_past_year'] ?? false,
+            'attended_school_past_year' => $childData['attended_school_past_year'] ?? false,
             'additional_notes' => $childData['additional_notes'] ?? null,
+            'status' => 'submitted',
             'submitted_at' => now(),
         ]);
     }
 
     /**
-     * Upload and create parent document
+     * Create document records and store the files
+     * @return Document|array<Document>
      */
-    public function uploadParentDocument(ParentInfo $parent, string $documentType, UploadedFile $file, string $uploadPath = null): Document
+    protected function createDocument(int $referenceId, string $referenceType, string $documentType, $files)
     {
-        // Handle file upload (you'll need to implement your Google Drive upload logic)
-        $filePath = $uploadPath ?? $this->uploadFileToGoogleDrive($file);
+        // If no files provided, return null
+        if (empty($files)) {
+            return null;
+        }
 
-        return Document::create([
-            'parent_id' => $parent->id,
-            'document_type' => $documentType,
-            'document_name' => $file->getClientOriginalName(),
-            'file_path' => $filePath,
-            'mime_type' => $file->getMimeType(),
-            'file_size' => $file->getSize(),
-            'status' => 'pending',
-        ]);
+        // Convert single file to array for consistent handling
+        $filesArray = is_array($files) ? $files : [$files];
+        $documents = [];
+
+        foreach ($filesArray as $file) {
+            if ($file instanceof UploadedFile) {
+                // For direct file uploads
+                $originalName = $file->getClientOriginalName();
+                $extension = $file->getClientOriginalExtension();
+                $nameWithoutExt = pathinfo($originalName, PATHINFO_FILENAME);
+
+                // Store with original name
+                $filePath = $file->storeAs(
+                    'documents/' . $documentType,
+                    $originalName,
+                    'local'
+                );
+
+                $documents[] = Document::create([
+                    'reference_id' => $referenceId,
+                    'reference_type' => $referenceType,
+                    'document_type' => $documentType,
+                    'document_name' => $originalName, // Keep original name for display
+                    'file_path' => $filePath,
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                    'status' => 'pending'
+                ]);
+            } else {
+                // For files already uploaded by Filament
+                $originalPath = (string)$file;
+                $originalName = basename($originalPath);
+                $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+                $nameWithoutExt = pathinfo($originalName, PATHINFO_FILENAME);
+
+                // Keep original path
+                $documents[] = Document::create([
+                    'reference_id' => $referenceId,
+                    'reference_type' => $referenceType,
+                    'document_type' => $documentType,
+                    'document_name' => $originalName, // Keep original name for display
+                    'file_path' => $originalPath,
+                    'mime_type' => null,
+                    'file_size' => null,
+                    'status' => 'pending'
+                ]);
+            }
+        }
+
+        // Return single document if only one was created, otherwise return array
+        return count($documents) === 1 ? $documents[0] : $documents;
     }
-
-    /**
-     * Upload and create child document
-     */
-    public function uploadChildDocument(NewApplication $application, string $documentType, UploadedFile $file, string $uploadPath = null): Document
-    {
-        // Handle file upload
-        $filePath = $uploadPath ?? $this->uploadFileToGoogleDrive($file);
-
-        return Document::create([
-            'application_id' => $application->id,
-            'document_type' => $documentType,
-            'document_name' => $file->getClientOriginalName(),
-            'file_path' => $filePath,
-            'mime_type' => $file->getMimeType(),
-            'file_size' => $file->getSize(),
-            'status' => 'pending',
-        ]);
-    }
-
-    /**
-     * Update parent information (syncs across all children)
-     */
-    public function updateParentInfo(ParentInfo $parent, array $data): ParentInfo
-    {
-        $parent->update($data);
-        return $parent->fresh();
-    }
-
     /**
      * Get all applications with their status for a parent
      */
@@ -154,7 +194,7 @@ class ApplicationService
                 'id' => $application->id,
                 'child_name' => $application->child_full_name,
                 'status' => $application->status,
-                'missing_documents' => $this->getMissingDocuments($application),
+                'missing_documents' => [],
                 'pending_documents' => $application->documents()->pending()->count(),
             ];
         })->toArray();
@@ -163,7 +203,7 @@ class ApplicationService
     /**
      * Get missing documents for an application
      */
-    protected function getMissingDocuments(NewApplication $application): array
+    protected function getMissingDocuments(Application $application): array
     {
         $requiredChildDocuments = ['school_report_card_2_years'];
         $existingDocuments = $application->documents()->pluck('document_type')->toArray();
@@ -171,13 +211,5 @@ class ApplicationService
         return array_diff($requiredChildDocuments, $existingDocuments);
     }
 
-    /**
-     * Placeholder for Google Drive upload - implement your existing logic
-     */
-    protected function uploadFileToGoogleDrive(UploadedFile $file): string
-    {
-        // Implement your Google Drive upload logic here
-        // Return the file ID or path
-        return 'placeholder-file-id';
-    }
+    // No longer needed as we're using local storage
 }

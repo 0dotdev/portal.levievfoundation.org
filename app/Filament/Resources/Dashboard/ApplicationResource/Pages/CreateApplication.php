@@ -8,6 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Notification;
 use App\Models\User;
 use App\Notifications\ApplicationStatusNotification;
+use App\Services\ApplicationService;
+use Illuminate\Support\Facades\Auth;
 
 class CreateApplication extends CreateRecord
 {
@@ -15,15 +17,7 @@ class CreateApplication extends CreateRecord
 
     protected static bool $canCreateAnother = false;
 
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        $data['school_wish_to_apply_in'] = json_encode($data['school_wish_to_apply_in'] ?? []);
-        // Add user_id if not set
-        if (!isset($data['user_id'])) {
-            $data['user_id'] = auth()->id();
-        }
-        return $data;
-    }
+    // Handling creation directly in create() method
 
     protected function getCreatedRedirectUrl(): ?string
     {
@@ -32,25 +26,34 @@ class CreateApplication extends CreateRecord
 
     protected function afterCreate(): void
     {
-        $record = $this->record;
+        $result = session('created_applications');
+
+        if (!$result) {
+            return;
+        }
+
+        $parent = $result['parent'];
+        $applications = $result['applications'];
 
         // Notify all admins
         $admins = User::where('roles', 'admin')->get();
-        Notification::send($admins, new ApplicationStatusNotification(
-            'New Application Submitted',
-            'A new application has been submitted by ' . optional($record->user)->name,
-            url('/admin/admin/applications/' . $record->id . '/edit')
-        ));
+        foreach ($applications as $application) {
+            Notification::send($admins, new ApplicationStatusNotification(
+                'New Application Submitted',
+                'A new application has been submitted by ' . Auth::user()->name,
+                url('/admin/admin/applications/' . $application->id . '/edit')
+            ));
+        }
 
         // Notify the user
-        optional($record->user)->notify(new ApplicationStatusNotification(
+        Auth::user()->notify(new ApplicationStatusNotification(
             'Application Submitted',
             'Your application has been submitted successfully. Please wait for our response.',
             url('/dashboard/applications')
         ));
 
-        // Force redirect using session
-        session()->flash('redirect_to_thank_you', true);
+        // Cleanup session and redirect
+        session()->forget('created_applications');
         $this->redirect('/dashboard/thank-you');
     }
 
@@ -67,10 +70,16 @@ class CreateApplication extends CreateRecord
 
     public function create(bool $another = false): void
     {
-        // Use parent create method to handle relationships properly
-        parent::create($another);
+        $data = $this->form->getState();
 
-        // Force redirect to thank you page after creation
-        $this->redirect('/dashboard/thank-you');
+        // Process form data using ApplicationService
+        $applicationService = app(ApplicationService::class);
+        $result = $applicationService->createApplicationsForFamily(Auth::user(), $data);
+
+        // Store the created records in session for notification
+        session(['created_applications' => $result]);
+
+        // Call afterCreate to handle notifications and redirect
+        $this->afterCreate();
     }
 }

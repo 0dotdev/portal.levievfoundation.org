@@ -34,14 +34,15 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Leviev Foundation')
-            ->brandLogo(asset('images/logo.jpg'))
+            ->brandLogo(fn() => view('components.filament.admin.brand'))
             ->favicon(asset('images/logo.jpg'))
             ->emailVerification()
             ->passwordReset()
+            ->sidebarWidth('13rem')
             ->defaultThemeMode(ThemeMode::Light)
             ->databaseNotifications()
             ->colors([
-                'primary' => Color::Red,
+                'primary' => "#c29a6f",
             ])
             ->sidebarFullyCollapsibleOnDesktop()
             ->sidebarCollapsibleOnDesktop()
