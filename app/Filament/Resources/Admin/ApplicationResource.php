@@ -407,7 +407,10 @@ class ApplicationResource extends Resource
                         'info' => 'resubmitted',
                     ])
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
+                TextColumn::make('is_applying_for_grant')->label('Applying for Grant?')
+                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                    ->searchable(),
+                TextColumn::make('created_at')->dateTime()->sortable(),
             ])->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')

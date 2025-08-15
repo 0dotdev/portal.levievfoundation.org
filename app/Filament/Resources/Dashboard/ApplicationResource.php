@@ -86,7 +86,7 @@ class ApplicationResource extends Resource
                                         TextInput::make('father_address')->label('Street Address')->required(),
                                         TextInput::make('father_city')->label('City')->required(),
                                         Select::make('father_state')->label('State')->options(self::states())->required(),
-                                        TextInput::make('father_pincode')->label('Pincode')->required(),
+                                        TextInput::make('father_pincode')->label('Pincode')->required()->numeric()->maxLength(6),
                                     ])
                                     ->columns(4),
 
@@ -110,7 +110,7 @@ class ApplicationResource extends Resource
                                         ->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                                     TextInput::make('mother_city')->label('City')->required(),
                                     Select::make('mother_state')->label('State')->options(self::states())->required(),
-                                    TextInput::make('mother_pincode')->label('Pincode')->required(),
+                                    TextInput::make('mother_pincode')->label('Pincode')->required()->numeric()->maxLength(6),
                                 ])
                                 ->columns(4)->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                         ]),
@@ -461,8 +461,17 @@ class ApplicationResource extends Resource
                                 TextArea::make('school_wish_to_apply_in')
                                     ->label('Applying for School')
                                     ->formatStateUsing(function ($state) {
+                                        if (is_array($state)) {
+                                            return !empty($state) ? implode(', ', $state) : null;
+                                        }
+
                                         $decoded = json_decode($state, true);
-                                        return is_array($decoded) ? implode(', ', $decoded) : $state;
+
+                                        if (empty($decoded)) {
+                                            return null;
+                                        }
+
+                                        return implode(', ', $decoded);
                                     })
                                     ->disabled(),
                                 TextInput::make('attended_school_past_year')
@@ -472,6 +481,9 @@ class ApplicationResource extends Resource
                                 TextInput::make('status')
                                     ->formatStateUsing(fn($state) => ucfirst($state))
                                     ->disabled(),
+                                Textarea::make('admin_comments')
+                                    ->label('Review Comments')
+                                    ->rows(2)
                             ])->columns(3),
                         Section::make('Student Documents')
                             ->schema([
@@ -501,6 +513,9 @@ class ApplicationResource extends Resource
                                                         'rejected' => 'Rejected'
                                                     ])
                                                     ->required(),
+                                                Textarea::make('comments')
+                                                    ->label('Comments')
+                                                    ->rows(2),
                                             ]),
 
                                     ])
@@ -539,7 +554,10 @@ class ApplicationResource extends Resource
                                                         'approved' => 'Approved',
                                                         'rejected' => 'Rejected'
                                                     ])
-                                                    ->required()
+                                                    ->required(),
+                                                Textarea::make('comments')
+                                                    ->label('Comments')
+                                                    ->rows(2)
                                             ]),
                                     ])
                                     ->columns(1)
