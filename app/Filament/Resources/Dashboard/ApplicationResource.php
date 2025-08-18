@@ -68,7 +68,7 @@ class ApplicationResource extends Resource
                 Wizard::make([
                     Step::make('Parent Information')->schema([
                         Section::make('Father Information')->columns([
-                            'sm' => 3,
+                            'sm' => 2,
                             'xl' => 4,
                         ])
                             ->schema([
@@ -86,7 +86,7 @@ class ApplicationResource extends Resource
                                         TextInput::make('father_address')->label('Street Address')->required(),
                                         TextInput::make('father_city')->label('City')->required(),
                                         Select::make('father_state')->label('State')->options(self::states())->required(),
-                                        TextInput::make('father_pincode')->label('Pincode')->required()->numeric()->maxLength(6),
+                                        TextInput::make('father_pincode')->label('Zipcode')->required()->maxLength(6)
                                     ])
                                     ->columns(4),
 
@@ -110,7 +110,7 @@ class ApplicationResource extends Resource
                                         ->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                                     TextInput::make('mother_city')->label('City')->required(),
                                     Select::make('mother_state')->label('State')->options(self::states())->required(),
-                                    TextInput::make('mother_pincode')->label('Pincode')->required()->numeric()->maxLength(6),
+                                    TextInput::make('mother_pincode')->label('Zipcode')->required()->numeric()->maxLength(6),
                                 ])
                                 ->columns(4)->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                         ]),
@@ -121,18 +121,25 @@ class ApplicationResource extends Resource
                             Select::make('family_status')
                                 ->options(self::familyStatuses())
                                 ->required()->default('married'),
-                            Select::make('no_of_children_in_household')->label('Number of children in household')->options(self::householdChildren())->required(),
+                            Select::make('no_of_children_in_household')
+                                ->label('Number of children in household')
+                                ->options(self::householdChildren())
+                                ->required()
+                                ->reactive()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if (is_numeric($state)) {
+                                        $set('children', array_fill(0, (int)$state, []));
+                                    }
+                                }),
                             TextInput::make('synagogue_affiliation')
                                 ->placeholder(' Please enter name and address.')
                                 ->label('Affiliated with any synagogues?')
-                                ->columnSpan(2)
                                 ->required(),
                         ]),
                     ]),
                     Step::make('Children Information')->schema([
                         Repeater::make('children')
                             ->label('Children')
-                            ->maxItems(fn(callable $get) => (int) $get('no_of_children_in_household') ?: null)
                             ->schema([
                                 TextInput::make('first_name')->label('First Name')->required(),
                                 TextInput::make('last_name')->label('Last Name')->required(),
@@ -152,13 +159,21 @@ class ApplicationResource extends Resource
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
+                                        ->previewable(false)
                                         ->maxFiles(2)
                                         ->directory('documents/report-cards')
                                         ->visibility('private')
                                         ->required(),
 
                                 ])->columns(3)->visible(fn(callable $get) => $get('is_applying_for_grant'))->columnSpanFull(),
-                            ])->defaultItems(fn(callable $get) => (int) $get('no_of_children_in_household') ?: 1)
+                            ])
+                            ->reactive()
+                            ->minItems(fn($get) => max((int)$get('no_of_children_in_household'), 1))
+                            ->defaultItems(fn($get) => max((int)$get('no_of_children_in_household'), 1))
+                            ->addActionLabel('Add additional child')
+                            ->itemLabel(function ($state, $livewire) {
+                                return 'Child Info';
+                            })
                             ->columns(4)
                     ]),
                     Step::make('Documents')->schema(
@@ -348,7 +363,6 @@ class ApplicationResource extends Resource
                             ]
                     ),
                     Step::make('Declaration')->schema([
-
                         Checkbox::make('info_is_true')
                             ->label('I declare that all information provided is true and accurate.')
                             ->rule('accepted')
@@ -366,30 +380,35 @@ class ApplicationResource extends Resource
                                 ->label('Additional Notes')
                                 ->nullable()
                                 ->rows(4)
-                                ->maxLength(500),
-                            DatePicker::make('declaration_date')
-                                ->label('Declaration Date')
-                                //Auto fill with current date
-                                ->default(now())
-                                ->columns(2)
-                                ->required(),
-                            SignaturePad::make('declaration_signature')
-                                ->label('Declaration Signature')
-                                ->extraAttributes(['style' => 'width:220px; height:90px;'])
-                                ->backgroundColor('rgba(255,255,255,1)')
-                                ->penColor('#222')
-                                ->dotSize(0.7)
-                                ->lineMinWidth(0.3)
-                                ->lineMaxWidth(1.2)
-                                ->throttle(8)
-                                ->minDistance(0.5)
-                                ->velocityFilterWeight(0.7)
-                                ->required(),
-                        ])->columns(3),
+                                ->maxLength(500)
+                                ->columnSpanFull(),
+                            Grid::make(2)->schema([
+                                DatePicker::make('declaration_date')
+                                    ->label('Declaration Date')
+                                    //Auto fill with current date
+                                    ->default(now())
+                                    ->required()
+                                    ->columnSpan(1),
+                                SignaturePad::make('declaration_signature')
+                                    ->label('Declaration Signature')
+                                    ->extraAttributes(['style' => 'width:220px; height:90px;'])
+                                    ->backgroundColor('rgba(255,255,255,1)')
+                                    ->penColor('#222')
+                                    ->dotSize(0.7)
+                                    ->lineMinWidth(0.3)
+                                    ->lineMaxWidth(1.2)
+                                    ->throttle(8)
+                                    ->minDistance(0.5)
+                                    ->velocityFilterWeight(0.7)
+                                    ->required()
+                                    ->columnSpan(1),
+                            ])->columns(3),
+
+                        ])->columns(1),
 
 
                     ]),
-                ])->columnSpanFull(),
+                ])->columnSpanFull()->persistStepInQueryString(),
             ]);
     }
 

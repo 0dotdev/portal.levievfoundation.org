@@ -30,9 +30,11 @@ use Filament\Tables\Actions\ExportBulkAction;
 use Saade\FilamentAutograph\Forms\Components\SignaturePad;
 use App\Services\GoogleDriveService;
 use App\Traits\CommonTrait;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
 class ApplicationResource extends Resource
@@ -69,7 +71,7 @@ class ApplicationResource extends Resource
                                     TextInput::make('father_address')->label('Street Address')->required(),
                                     TextInput::make('father_city')->label('City')->required(),
                                     Select::make('father_state')->label('State')->options(self::states())->required(),
-                                    TextInput::make('father_pincode')->label('Pincode')->required(),
+                                    TextInput::make('father_pincode')->label('Zipcode')->required(),
                                 ])
                                 ->columns(4),
 
@@ -93,7 +95,7 @@ class ApplicationResource extends Resource
                                         ->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                                     TextInput::make('mother_city')->label('City')->required(),
                                     Select::make('mother_state')->label('State')->options(self::states())->required(),
-                                    TextInput::make('mother_pincode')->label('Pincode')->required(),
+                                    TextInput::make('mother_pincode')->label('Zipcode')->required(),
                                 ])
                                 ->columns(4)->hidden(fn(callable $get) => !$get('mother_has_different_address')),
                         ]),
@@ -456,8 +458,17 @@ class ApplicationResource extends Resource
                             TextArea::make('school_wish_to_apply_in')
                                 ->label('Applying for School')
                                 ->formatStateUsing(function ($state) {
+                                    if (is_array($state)) {
+                                        return !empty($state) ? implode(', ', $state) : null;
+                                    }
+
                                     $decoded = json_decode($state, true);
-                                    return is_array($decoded) ? implode(', ', $decoded) : $state;
+
+                                    if (empty($decoded)) {
+                                        return null;
+                                    }
+
+                                    return implode(', ', $decoded);
                                 })
                                 ->disabled(),
                             TextInput::make('attended_school_past_year')
@@ -467,116 +478,91 @@ class ApplicationResource extends Resource
                             TextInput::make('status')
                                 ->formatStateUsing(fn($state) => ucfirst($state))
                                 ->disabled(),
+                            Textarea::make('admin_comments')
+                                ->label('Review Comments')
+                                ->rows(2)
                         ])->columns(3),
-
-                    Section::make('Documents')
+                    Section::make('Student Documents')
                         ->schema([
-                            Group::make([
-                                Placeholder::make('recent_report_card')
-                                    ->label('Report Cards')
-                                    ->content(function ($record) {
-                                        $documents = Document::where('reference_id', $record->id)
-                                            ->where('reference_type', 'child')
-                                            ->where('document_type', 'school_report_card_2_years')
-                                            ->get();
+                            Repeater::make('documents')
+                                ->relationship('documents', fn(Builder $query) => $query->where('reference_type', 'child'))
+                                ->schema([
+                                    Grid::make(3)
+                                        ->schema([
+                                            Select::make('document_type')
+                                                ->options([
+                                                    'school_report_card_2_years' => 'School Report Card (2 Years)'
+                                                ])
+                                                ->disabled()
+                                                ->dehydrated(false)
+                                                ->suffixAction(
+                                                    Action::make('preview')
+                                                        ->icon('heroicon-m-eye')
+                                                        ->label('Preview Document')
+                                                        ->url(fn($record) => $record?->getPreviewUrl())
+                                                        ->openUrlInNewTab()
+                                                        ->visible(fn($record) => $record?->getPreviewUrl() !== null)
+                                                ),
+                                            Select::make('status')
+                                                ->options([
+                                                    'pending' => 'Pending Review',
+                                                    'approved' => 'Approved',
+                                                    'rejected' => 'Rejected'
+                                                ])
+                                                ->required(),
+                                            Textarea::make('comments')
+                                                ->label('Comments')
+                                                ->rows(2),
+                                        ]),
 
-                                        if ($documents->isEmpty()) {
-                                            return 'No documents available';
-                                        }
+                                ])
+                                ->columns(2)
+                                ->addable(false)
+                                ->deletable(false)
+                                ->reorderable(false),
+                        ]),
 
-                                        $links = $documents->map(function ($doc) {
-                                            $url = url('storage/' . $doc->file_path);
-                                            return "<a href='{$url}' target='_blank' class='text-primary-600 hover:text-primary-500'>{$doc->document_name}</a>";
-                                        })->join('<br>');
+                    Section::make('Parent Documents')
+                        ->schema([
+                            Repeater::make('parentDocuments')
+                                ->relationship('parentDocuments')
+                                ->schema([
+                                    Grid::make(3)
+                                        ->schema([
+                                            Select::make('document_type')
+                                                ->options([
+                                                    'government_id' => 'Government ID',
+                                                    'marriage_certificate' => 'Marriage Certificate',
+                                                    'recent_utility_bill' => 'Recent Utility Bill'
+                                                ])
+                                                ->disabled()
+                                                ->dehydrated(false)
+                                                ->suffixAction(
+                                                    Action::make('preview')
+                                                        ->icon('heroicon-m-eye')
+                                                        ->label('Preview Document')
+                                                        ->url(fn($record) => $record?->getPreviewUrl())
+                                                        ->openUrlInNewTab()
+                                                        ->visible(fn($record) => $record?->getPreviewUrl() !== null)
+                                                ),
+                                            Select::make('status')
+                                                ->options([
+                                                    'pending' => 'Pending Review',
+                                                    'approved' => 'Approved',
+                                                    'rejected' => 'Rejected'
+                                                ])
+                                                ->required(),
+                                            Textarea::make('comments')
+                                                ->label('Comments')
+                                                ->rows(2)
+                                        ]),
+                                ])
+                                ->columns(1)
+                                ->addable(false)
+                                ->deletable(false)
+                                ->reorderable(false)
 
-                                        return new HtmlString($links);
-                                    }),
-                                Placeholder::make('report_card_status')
-                                    ->label('Status')
-                                    ->content(
-                                        fn($record) =>
-                                        Document::where('reference_id', $record->id)
-                                            ->where('reference_type', 'child')
-                                            ->where('document_type', 'school_report_card_2_years')
-                                            ->first()?->status ?? 'N/A'
-                                    ),
-                            ])->columns(2),
-
-                            Group::make([
-                                Placeholder::make('government_id')
-                                    ->label('Government ID')
-                                    ->content(function ($record) {
-                                        if (!$record->parent) {
-                                            return 'No documents available';
-                                        }
-
-                                        $documents = Document::where('reference_id', $record->parent->id)
-                                            ->where('reference_type', 'parent')
-                                            ->where('document_type', 'government_id')
-                                            ->get();
-
-                                        if ($documents->isEmpty()) {
-                                            return 'No documents available';
-                                        }
-
-                                        $links = $documents->map(function ($doc) {
-                                            $url = url('storage/' . $doc->file_path);
-                                            return "<a href='{$url}' target='_blank' class='text-primary-600 hover:text-primary-500'>{$doc->document_name}</a>";
-                                        })->join('<br>');
-
-                                        return new HtmlString($links);
-                                    }),
-                                Placeholder::make('government_id_status')
-                                    ->label('Status')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->parent
-                                            ? Document::where('reference_id', $record->parent->id)
-                                            ->where('reference_type', 'parent')
-                                            ->where('document_type', 'government_id')
-                                            ->first()?->status ?? 'N/A'
-                                            : 'N/A'
-                                    ),
-                            ])->columns(2),
-
-                            Group::make([
-                                Placeholder::make('marriage_certificate')
-                                    ->label('Marriage Certificate')
-                                    ->content(function ($record) {
-                                        if (!$record->parent) {
-                                            return 'No documents available';
-                                        }
-
-                                        $documents = Document::where('reference_id', $record->parent->id)
-                                            ->where('reference_type', 'parent')
-                                            ->where('document_type', 'marriage_certificate')
-                                            ->get();
-
-                                        if ($documents->isEmpty()) {
-                                            return 'No documents available';
-                                        }
-
-                                        $links = $documents->map(function ($doc) {
-                                            $url = url('storage/' . $doc->file_path);
-                                            return "<a href='{$url}' target='_blank' class='text-primary-600 hover:text-primary-500'>{$doc->document_name}</a>";
-                                        })->join('<br>');
-
-                                        return new HtmlString($links);
-                                    }),
-                                Placeholder::make('marriage_certificate_status')
-                                    ->label('Status')
-                                    ->content(
-                                        fn($record) =>
-                                        $record->parent
-                                            ? Document::where('reference_id', $record->parent->id)
-                                            ->where('reference_type', 'parent')
-                                            ->where('document_type', 'marriage_certificate')
-                                            ->first()?->status ?? 'N/A'
-                                            : 'N/A'
-                                    ),
-                            ])->columns(2),
-                        ])->columns(1),
-
+                        ]),
                     Section::make('Parent Information')
                         ->schema([
                             Grid::make(2)->schema([
@@ -628,6 +614,7 @@ class ApplicationResource extends Resource
                                     ->disabled(),
                                 TextInput::make('parent.synagogue_affiliation')
                                     ->label('Synagogue Affiliation')
+                                    ->formatStateUsing(fn($record) => $record->parent->synagogue_affiliation)
                                     ->disabled(),
                             ]),
 

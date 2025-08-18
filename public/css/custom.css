@@ -1,0 +1,13 @@
+header.fi-section-header {
+    background: #f4f4f5;
+}
+
+.fi-section {
+    overflow: hidden;
+}
+
+.fi-ac-action.submit-button {
+    margin: auto;
+    font-size: 17px;
+    padding: 10px 20px;
+}

@@ -25,6 +25,9 @@ use Filament\Navigation\NavigationBuilder;
 use Filament\Navigation\NavigationItem;
 use App\Filament\Pages\Dashboard\ThankYou;
 use App\Http\Middleware\RefreshGoogleDriveToken;
+use Filament\Support\Assets\Css;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 
 class DashboardPanelProvider extends PanelProvider
 {
@@ -70,12 +73,14 @@ class DashboardPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ])
-            ->tenant(null);
+            ])->tenant(null);
     }
 
     public function boot(): void
     {
-        // Remove the previous render hooks as they didn't work
+        FilamentAsset::register([
+            Css::make('custom-stylesheet', asset('css/custom.css')),
+            Js::make('custom-script', asset('js/custom.js')),
+        ]);
     }
 }
