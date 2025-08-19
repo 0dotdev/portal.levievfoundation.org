@@ -33,8 +33,10 @@ class CreateApplication extends CreateRecord
             return;
         }
 
-        $parent = $result['parent'];
         $applications = $result['applications'];
+        $totalChildren = $result['total_children'] ?? 0;
+        $childrenApplyingForGrants = $result['children_applying_for_grants'] ?? 0;
+        $childrenNotApplying = $result['children_not_applying'] ?? 0;
 
         // Notify all admins
         $admins = User::where('roles', 'admin')->get();
@@ -46,10 +48,20 @@ class CreateApplication extends CreateRecord
             ));
         }
 
+        // Create user notification message
+        $notificationMessage = 'Your applications have been submitted successfully. ';
+        if ($childrenApplyingForGrants > 0) {
+            $notificationMessage .= "We received {$childrenApplyingForGrants} grant application(s).";
+        }
+        if ($childrenNotApplying > 0) {
+            $notificationMessage .= " {$childrenNotApplying} child(ren) were not applying for grants, so no applications were created for them.";
+        }
+        $notificationMessage .= ' Please wait for our response.';
+
         // Notify the user
         Auth::user()->notify(new ApplicationStatusNotification(
             'Application Submitted',
-            'Your application has been submitted successfully. Please wait for our response.',
+            $notificationMessage,
             url('/dashboard/applications')
         ));
 
@@ -72,6 +84,16 @@ class CreateApplication extends CreateRecord
     public function create(bool $another = false): void
     {
         $data = $this->form->getState();
+
+        // Validate that at least one child is applying for a grant
+        $childrenApplyingForGrants = collect($data['children'])->filter(function ($child) {
+            return isset($child['is_applying_for_grant']) && $child['is_applying_for_grant'] === true;
+        });
+
+        if ($childrenApplyingForGrants->isEmpty()) {
+            $this->addError('children', 'At least one child must be applying for a grant to submit this form.');
+            return;
+        }
 
         // Process form data using ApplicationService
         $applicationService = app(ApplicationService::class);

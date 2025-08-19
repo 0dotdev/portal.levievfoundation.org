@@ -8,7 +8,6 @@ use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\ApplicationStatusNotification;
 use App\Models\User;
-use App\Models\ParentInfo;
 use App\Traits\CommonTrait;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Checkbox;
@@ -33,25 +32,14 @@ class EditApplication extends EditRecord
     protected static string $resource = ApplicationResource::class;
 
     use CommonTrait;
+
     protected function getHeaderActions(): array
     {
         return [
             Actions\DeleteAction::make(),
         ];
     }
-    protected function mutateFormDataBeforeFill(array $data): array
-    {
-        if (isset($data['parent'])) {
-            $data['parent'] = (array) $data['parent'];
-        }
-        return $data;
-    }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->with(['parent', 'documents', 'user']);
-    }
     public function form(Form $form): Form
     {
         return $form
@@ -75,8 +63,6 @@ class EditApplication extends EditRecord
                         Select::make('current_grade')
                             ->options(self::schoolGrades())
                             ->required(),
-                        Checkbox::make('is_applying_for_grant')
-                            ->label('Applying for Grant?')->columnSpan(3)->disabled(),
                         Select::make('school_year_applying_for')
                             ->options(self::applyingYears())
                             ->required()
@@ -103,234 +89,96 @@ class EditApplication extends EditRecord
                     ->schema([
                         Grid::make(2)->schema([
                             Section::make("Father's Information")->schema([
-                                TextInput::make('parent.father_first_name')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_first_name);
-                                        }
-                                    })
-                                    ->required(),
-                                TextInput::make('parent.father_last_name')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_last_name);
-                                        }
-                                    })
-                                    ->required(),
-                                TextInput::make('parent.father_phone')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_phone);
-                                        }
-                                    })
+                                TextInput::make('father_first_name')->required(),
+                                TextInput::make('father_last_name')->required(),
+                                TextInput::make('father_phone')
                                     ->required()
                                     ->tel()
                                     ->mask('(999) 999-9999'),
-                                TextInput::make('parent.father_email')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_email);
-                                        }
-                                    })
+                                TextInput::make('father_email')
                                     ->required()
                                     ->email(),
-                                TextInput::make('parent.father_address')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_address);
-                                        }
-                                    })
-                                    ->required(),
-                                TextInput::make('parent.father_city')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_city);
-                                        }
-                                    })
-                                    ->required(),
-                                Select::make('parent.father_state')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_state);
-                                        }
-                                    })
+                                TextInput::make('father_address')->required(),
+                                TextInput::make('father_city')->required(),
+                                Select::make('father_state')
                                     ->options(self::states())
                                     ->required(),
-                                TextInput::make('parent.father_pincode')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->father_pincode);
-                                        }
-                                    })
+                                TextInput::make('father_pincode')
                                     ->required()
                                     ->numeric(),
                             ])->columns(4),
                             Section::make("Mother's Information")->schema([
-                                TextInput::make('parent.mother_first_name')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->mother_first_name);
-                                        }
-                                    })
-                                    ->required(),
-                                TextInput::make('parent.mother_last_name')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->mother_last_name);
-                                        }
-                                    })
-                                    ->required(),
-                                TextInput::make('parent.mother_phone')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->mother_phone);
-                                        }
-                                    })
+                                TextInput::make('mother_first_name')->required(),
+                                TextInput::make('mother_last_name')->required(),
+                                TextInput::make('mother_phone')
                                     ->required()
                                     ->tel()
                                     ->mask('(999) 999-9999'),
-                                TextInput::make('parent.mother_email')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->mother_email);
-                                        }
-                                    })
+                                TextInput::make('mother_email')
                                     ->required()
                                     ->email(),
-                                Checkbox::make('parent.mother_has_different_address')
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if (isset($this->record->parent)) {
-                                            $component->state($this->record->parent->mother_has_different_address);
-                                        }
-                                    })
+                                Checkbox::make('mother_has_different_address')
                                     ->label('Different address than father?')
                                     ->reactive(),
                                 Group::make([
-                                    TextInput::make('parent.mother_address')
-                                        ->afterStateHydrated(function ($component, $state) {
-                                            if (isset($this->record->parent)) {
-                                                $component->state($this->record->parent->mother_address);
-                                            }
-                                        })
-                                        ->required(),
-                                    TextInput::make('parent.mother_city')
-                                        ->afterStateHydrated(function ($component, $state) {
-                                            if (isset($this->record->parent)) {
-                                                $component->state($this->record->parent->mother_city);
-                                            }
-                                        })
-                                        ->required(),
-                                    Select::make('parent.mother_state')
-                                        ->afterStateHydrated(function ($component, $state) {
-                                            if (isset($this->record->parent)) {
-                                                $component->state($this->record->parent->mother_state);
-                                            }
-                                        })
+                                    TextInput::make('mother_address')->required(),
+                                    TextInput::make('mother_city')->required(),
+                                    Select::make('mother_state')
                                         ->options(self::states())
                                         ->required(),
-                                    TextInput::make('parent.mother_pincode')
-                                        ->afterStateHydrated(function ($component, $state) {
-                                            if (isset($this->record->parent)) {
-                                                $component->state($this->record->parent->mother_pincode);
-                                            }
-                                        })
+                                    TextInput::make('mother_pincode')
                                         ->required()
                                         ->numeric(),
                                 ])->columns(2)
-                                    ->visible(fn($get) => $get('parent.mother_has_different_address')),
+                                    ->visible(fn($get) => $get('mother_has_different_address')),
                             ])->columns(2),
                         ]),
                     ]),
 
                 Section::make('Documents Review')
                     ->schema([
-                        Section::make('Student Documents')
+                        Repeater::make('documents')
+                            ->relationship('documents')
                             ->schema([
-                                Repeater::make('documents')
-                                    ->relationship('documents', fn(Builder $query) => $query->where('reference_type', 'child'))
+                                Grid::make(3)
                                     ->schema([
-                                        Grid::make(3)
-                                            ->schema([
-                                                Select::make('document_type')
-                                                    ->options([
-                                                        'school_report_card_2_years' => 'School Report Card (2 Years)'
-                                                    ])
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->suffixAction(
-                                                        Action::make('preview')
-                                                            ->icon('heroicon-m-eye')
-                                                            ->label('Preview Document')
-                                                            ->url(fn($record) => $record?->getPreviewUrl())
-                                                            ->openUrlInNewTab()
-                                                            ->visible(fn($record) => $record?->getPreviewUrl() !== null)
-                                                    )
-                                                    ->columnSpan(1),
-                                                Select::make('status')
-                                                    ->options([
-                                                        'pending' => 'Pending Review',
-                                                        'approved' => 'Approved',
-                                                        'rejected' => 'Rejected'
-                                                    ])
-                                                    ->required(),
-                                                Textarea::make('comments')
-                                                    ->label('Review Comments')
-                                                    ->placeholder('Add any comments about this document')
-                                                    ->rows(2),
-                                            ]),
-
-
-                                    ])
-                                    ->columns(4)
-                                    ->addable(false)
-                                    ->deletable(false)
-                                    ->reorderable(false),
-                            ]),
-
-                        Section::make('Parent Documents')
-                            ->schema([
-                                Repeater::make('parentDocuments')
-                                    ->relationship('parentDocuments')
-                                    ->schema([
-                                        Grid::make(3)
-                                            ->schema([
-                                                Select::make('document_type')
-                                                    ->options([
-                                                        'government_id' => 'Government ID',
-                                                        'marriage_certificate' => 'Marriage Certificate',
-                                                        'recent_utility_bill' => 'Recent Utility Bill'
-                                                    ])
-                                                    ->disabled()
-                                                    ->dehydrated(false)
-                                                    ->suffixAction(
-                                                        Action::make('preview')
-                                                            ->icon('heroicon-m-eye')
-                                                            ->label('Preview Document')
-                                                            ->url(fn($record) => $record?->getPreviewUrl())
-                                                            ->openUrlInNewTab()
-                                                            ->visible(fn($record) => $record?->getPreviewUrl() !== null)
-                                                    ),
-                                                Select::make('status')
-                                                    ->options([
-                                                        'pending' => 'Pending Review',
-                                                        'approved' => 'Approved',
-                                                        'rejected' => 'Rejected'
-                                                    ])
-                                                    ->required(),
-                                                Textarea::make('comments')
-                                                    ->label('Review Comments')
-                                                    ->placeholder('Add any comments about this document')
-                                                    ->rows(2)
-
-                                            ]),
-                                    ])
-                                    ->columns(4)
-                                    ->addable(false)
-                                    ->deletable(false)
-                                    ->reorderable(false)
-
+                                        Select::make('document_type')
+                                            ->options([
+                                                'government_id' => 'Government ID',
+                                                'marriage_certificate' => 'Marriage Certificate',
+                                                'recent_utility_bill' => 'Recent Utility Bill',
+                                                'school_report_card_2_years' => 'School Report Card (2 Years)'
+                                            ])
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->suffixAction(
+                                                Action::make('preview')
+                                                    ->icon('heroicon-m-eye')
+                                                    ->label('Preview Document')
+                                                    ->url(fn($record) => $record?->getPreviewUrl())
+                                                    ->openUrlInNewTab()
+                                                    ->visible(fn($record) => $record?->getPreviewUrl() !== null)
+                                            )
+                                            ->columnSpan(1),
+                                        Select::make('status')
+                                            ->options([
+                                                'pending' => 'Pending Review',
+                                                'approved' => 'Approved',
+                                                'rejected' => 'Rejected'
+                                            ])
+                                            ->required(),
+                                        Textarea::make('comments')
+                                            ->label('Review Comments')
+                                            ->placeholder('Add any comments about this document')
+                                            ->rows(2),
+                                    ]),
                             ])
+                            ->columns(4)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false),
                     ]),
+
                 Section::make('Application Status')
                     ->schema([
                         Select::make('status')
@@ -347,13 +195,6 @@ class EditApplication extends EditRecord
         // Update the reviewed_at and reviewed_by fields
         $this->record->reviewed_at = now();
         $this->record->reviewed_by = \Illuminate\Support\Facades\Auth::id();
-
-        // Handle parent data saving
-        if ($parentData = $this->data['parent'] ?? null) {
-            if ($this->record->parent) {
-                $this->record->parent->update($parentData);
-            }
-        }
     }
 
     protected function afterSave(): void
@@ -361,17 +202,9 @@ class EditApplication extends EditRecord
         $record = $this->record;
 
         // Check if all required documents are approved
-        $allStudentDocsApproved = $record->documents()
-            ->where('reference_type', 'child')
+        $allDocumentsApproved = $record->documents()
             ->where('status', '!=', 'approved')
             ->count() === 0;
-
-        $allParentDocsApproved = $record->documents()
-            ->where('reference_type', 'parent')
-            ->where('status', '!=', 'approved')
-            ->count() === 0;
-
-        $allDocumentsApproved = $allStudentDocsApproved && $allParentDocsApproved;
 
         // If all documents are approved, update the application status accordingly
         if ($allDocumentsApproved && $record->status === 'pending') {

@@ -121,7 +121,7 @@ class ApplicationResource extends Resource
                             ->schema([
                                 TextInput::make('first_name')->label('First Name')->required(),
                                 TextInput::make('last_name')->label('Last Name')->required(),
-                                DatePicker::make('date_of_birth')->label('Date of Birth')->maxDate(now())->minDate(now()->subYears(150))->required(),
+                                DatePicker::make('date_of_birth')->label('Date of Birth')->maxDate(now())->minDate(now()->subYears(30))->required(),
                                 Select::make('gender')->label('Gender')->options(static::genders())->required(),
                                 TextInput::make('current_school_name')->label('Current School Name')->required(),
                                 Select::make('current_school_location')->label('Current School Location')->options(self::states())->required(),
@@ -409,9 +409,6 @@ class ApplicationResource extends Resource
                         'info' => 'resubmitted',
                     ])
                     ->sortable(),
-                TextColumn::make('is_applying_for_grant')->label('Applying for Grant?')
-                    ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
-                    ->searchable(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])->defaultSort('created_at', 'desc')
             ->filters([
@@ -611,6 +608,10 @@ class ApplicationResource extends Resource
                                 TextInput::make('parent.family_status')
                                     ->label('Family Status')
                                     ->formatStateUsing(fn($record) => ucfirst($record->parent->family_status))
+                                    ->disabled(),
+                                TextInput::make('no_of_children_in_household')
+                                    ->label('No. of Children in Household')
+                                    ->formatStateUsing(fn($record) => ucfirst($record->no_of_children_in_household))
                                     ->disabled(),
                                 TextInput::make('parent.synagogue_affiliation')
                                     ->label('Synagogue Affiliation')

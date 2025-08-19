@@ -12,8 +12,8 @@ return new class extends Migration {
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
-            $table->enum('reference_type', ['parent', 'child']);
-            $table->string('reference_id');
+            $table->foreignId('application_id')->constrained('applications')->onDelete('cascade');
+
             // Document Information
             $table->enum('document_type', [
                 'government_id',

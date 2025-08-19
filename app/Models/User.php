@@ -67,33 +67,19 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
+    /**
+     * Get applications for this user
+     */
     public function applications()
     {
-        return $this->hasManyThrough(Application::class, ParentInfo::class, 'user_id', 'parent_id');
+        return $this->hasMany(Application::class);
     }
 
     /**
-     * Get parent info for this user
-     */
-    public function parentInfo()
-    {
-        return $this->hasOne(ParentInfo::class);
-    }
-
-    /**
-     * Get parent-level documents for this user
+     * Get documents for this user through applications
      */
     public function documents()
     {
-        return $this->hasMany(Document::class, 'reference_id')
-            ->where('reference_type', 'parent');
-    }
-
-    /**
-     * Alias for documents() for clearer semantics
-     */
-    public function parentDocuments()
-    {
-        return $this->documents();
+        return $this->hasManyThrough(Document::class, Application::class);
     }
 }

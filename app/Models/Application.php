@@ -20,6 +20,35 @@ class Application extends Model
         'school_wish_to_apply_in',
         'is_applying_for_grant',
         'attended_school_past_year',
+        // Parent Information
+        'father_first_name',
+        'father_last_name',
+        'father_phone',
+        'father_email',
+        'father_address',
+        'father_city',
+        'father_state',
+        'father_pincode',
+        'father_country',
+        'mother_first_name',
+        'mother_last_name',
+        'mother_phone',
+        'mother_email',
+        'mother_has_different_address',
+        'mother_address',
+        'mother_city',
+        'mother_state',
+        'mother_pincode',
+        'mother_country',
+        'family_status',
+        'no_of_children_in_household',
+        'synagogue_affiliation',
+        'declaration_signature',
+        'declaration_date',
+        'info_is_true',
+        'applicants_are_jewish',
+        'parent_is_of_bukharian_descent',
+        // Application Status
         'status',
         'additional_notes',
         'admin_comments',
@@ -32,7 +61,12 @@ class Application extends Model
         'school_wish_to_apply_in' => 'array',
         'is_applying_for_grant' => 'boolean',
         'attended_school_past_year' => 'boolean',
-        'child_date_of_birth' => 'date',
+        'mother_has_different_address' => 'boolean',
+        'info_is_true' => 'boolean',
+        'applicants_are_jewish' => 'boolean',
+        'parent_is_of_bukharian_descent' => 'boolean',
+        'date_of_birth' => 'date',
+        'declaration_date' => 'date',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
@@ -46,50 +80,11 @@ class Application extends Model
     }
 
     /**
-     * Get the parent through user relationship
-     */
-    public function parent()
-    {
-        return $this->hasOneThrough(
-            ParentInfo::class,
-            User::class,
-            'id', // Foreign key on users table
-            'user_id', // Foreign key on parent_infos table
-            'user_id', // Local key on applications table
-            'id' // Local key on users table
-        );
-    }
-
-
-    /**
-     * Get documents specific to this application (child documents)
+     * Get all documents for this application
      */
     public function documents()
     {
-        return $this->hasMany(Document::class, 'reference_id')
-            ->where('reference_type', 'child');
-    }
-
-    /**
-     * Get parent documents through user relationship
-     */
-    public function parentDocuments()
-    {
-        return $this->user->documents();
-    }
-
-    /**
-     * Get ALL documents for this application (both parent and child documents)
-     */
-    public function allDocuments()
-    {
-        return Document::where(function ($query) {
-            $query->where('reference_type', 'child')
-                ->where('reference_id', $this->id);
-        })->orWhere(function ($query) {
-            $query->where('reference_type', 'parent')
-                ->where('reference_id', $this->user_id);
-        })->get();
+        return $this->hasMany(Document::class, 'application_id');
     }
 
     public function getSchoolWishToApplyInAttribute($value)

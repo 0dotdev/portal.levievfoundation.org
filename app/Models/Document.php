@@ -24,8 +24,7 @@ class Document extends Model
         return null;
     }
     protected $fillable = [
-        'reference_type',
-        'reference_id',
+        'application_id',
         'document_type',
         'document_name',
         'file_path',
@@ -43,18 +42,8 @@ class Document extends Model
     ];
 
     /**
-     * Document types
+     * Document types - now all types can belong to any application
      */
-    const PARENT_DOCUMENT_TYPES = [
-        'government_id' => 'Government ID',
-        'marriage_certificate' => 'Marriage Certificate',
-        'recent_utility_bill' => 'Recent Utility Bill',
-    ];
-
-    const CHILD_DOCUMENT_TYPES = [
-        'school_report_card_2_years' => 'School Report Card for the Past 2 Years',
-    ];
-
     const ALL_DOCUMENT_TYPES = [
         'government_id' => 'Government ID',
         'marriage_certificate' => 'Marriage Certificate',
@@ -63,15 +52,7 @@ class Document extends Model
     ];
 
     /**
-     * Get the parent that owns this document (if parent-level)
-     */
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(ParentInfo::class, 'parent_id');
-    }
-
-    /**
-     * Get the application that owns this document (if child-level)
+     * Get the application that owns this document
      */
     public function application(): BelongsTo
     {
@@ -84,22 +65,6 @@ class Document extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
-    }
-
-    /**
-     * Check if document is parent-level
-     */
-    public function getIsParentDocumentAttribute(): bool
-    {
-        return in_array($this->document_type, array_keys(self::PARENT_DOCUMENT_TYPES));
-    }
-
-    /**
-     * Check if document is child-level
-     */
-    public function getIsChildDocumentAttribute(): bool
-    {
-        return in_array($this->document_type, array_keys(self::CHILD_DOCUMENT_TYPES));
     }
 
     /**
@@ -140,22 +105,6 @@ class Document extends Model
     public function getIsPendingAttribute(): bool
     {
         return $this->status === 'pending';
-    }
-
-    /**
-     * Scope for parent documents
-     */
-    public function scopeParentDocuments($query)
-    {
-        return $query->whereIn('document_type', array_keys(self::PARENT_DOCUMENT_TYPES));
-    }
-
-    /**
-     * Scope for child documents
-     */
-    public function scopeChildDocuments($query)
-    {
-        return $query->whereIn('document_type', array_keys(self::CHILD_DOCUMENT_TYPES));
     }
 
     /**

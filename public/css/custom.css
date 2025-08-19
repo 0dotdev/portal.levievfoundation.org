@@ -12,4 +12,9 @@ header.fi-section-header,
     margin: auto;
     font-size: 17px;
     padding: 10px 20px;
+    display: none !important;
+}
+
+.fi-ac-action.btn-submit-visible {
+    display: block !important;
 }
