@@ -82,4 +82,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     {
         return $this->hasManyThrough(Document::class, Application::class);
     }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->roles === 'admin';
+    }
 }

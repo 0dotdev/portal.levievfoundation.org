@@ -3,10 +3,21 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\GoogleDriveTokenController;
 use Illuminate\Support\Facades\Artisan;
 
 Route::get('/', function () {
+    // If user is authenticated, redirect based on role
+    if (Auth::check()) {
+        $user = Auth::user();
+        if ($user->roles === 'admin') {
+            return redirect('/admin');
+        }
+        return redirect('/dashboard');
+    }
+
+    // If not authenticated, redirect to register
     return redirect(route('filament.dashboard.auth.register'));
 });
 
