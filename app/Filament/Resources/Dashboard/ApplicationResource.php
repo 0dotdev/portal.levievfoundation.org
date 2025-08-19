@@ -67,7 +67,7 @@ class ApplicationResource extends Resource
             ->schema([
                 Wizard::make([
                     Step::make('Parent Information')->schema([
-                        Section::make('Father Information')->columns([
+                        Section::make("Father's Information")->columns([
                             'sm' => 2,
                             'xl' => 4,
                         ])
@@ -91,7 +91,7 @@ class ApplicationResource extends Resource
                                     ->columns(4),
 
                             ]),
-                        Section::make('Mother Information')->columns([
+                        Section::make("Mother's Information")->columns([
                             'sm' => 3,
                             'xl' => 4,
                         ])->schema([
@@ -139,7 +139,7 @@ class ApplicationResource extends Resource
                     ]),
                     Step::make('Children Information')->schema([
                         Repeater::make('children')
-                            ->label('Children')
+                            ->label('Childrens Information')
                             ->schema([
                                 TextInput::make('first_name')->label('First Name')->required(),
                                 TextInput::make('last_name')->label('Last Name')->required(),
@@ -151,11 +151,11 @@ class ApplicationResource extends Resource
                                 Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(4),
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
-                                    Select::make('school_wish_to_apply_in')->label('Schools Wish to Apply In')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
+                                    Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
                                     Checkbox::make('attended_school_past_year')
-                                        ->label('Is applicant has attended school in the past year.'),
+                                        ->label('Has the applicant attended school in the past year?'),
                                     FileUpload::make('recent_report_card')
-                                        ->label('2 Years School Report Card')
+                                        ->label('School Report Card for the Past 2 Years')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -244,7 +244,7 @@ class ApplicationResource extends Resource
                                             ->disabled(fn($record) => $record && $record->status === 'fix_needed'),
                                     ]),
                                     FileUpload::make('recent_report_card')
-                                        ->label('2 Years School Report Card')
+                                        ->label('School Report Card for the Past 2 Years')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -408,7 +408,11 @@ class ApplicationResource extends Resource
 
 
                     ]),
-                ])->columnSpanFull()->persistStepInQueryString(),
+                ])->columnSpanFull()->persistStepInQueryString()->nextAction(
+                    fn(Action $action) => $action->label('Proceed to Next Step'),
+                )->previousAction(
+                    fn(Action $action) => $action->label('Back to Previous Step'),
+                )
             ]);
     }
 

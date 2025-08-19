@@ -14,7 +14,6 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
 
-            // Father Information
             $table->string('father_first_name');
             $table->string('father_last_name');
             $table->string('father_phone');

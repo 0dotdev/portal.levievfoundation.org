@@ -1,8 +1,10 @@
-header.fi-section-header {
+header.fi-section-header,
+.fi-fo-repeater-item-header {
     background: #f4f4f5;
 }
 
-.fi-section {
+.fi-section,
+.fi-fo-repeater-item {
     overflow: hidden;
 }
 

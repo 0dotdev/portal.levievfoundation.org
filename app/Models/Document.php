@@ -52,14 +52,14 @@ class Document extends Model
     ];
 
     const CHILD_DOCUMENT_TYPES = [
-        'school_report_card_2_years' => '2 Years School Report Card',
+        'school_report_card_2_years' => 'School Report Card for the Past 2 Years',
     ];
 
     const ALL_DOCUMENT_TYPES = [
         'government_id' => 'Government ID',
         'marriage_certificate' => 'Marriage Certificate',
         'recent_utility_bill' => 'Recent Utility Bill',
-        'school_report_card_2_years' => '2 Years School Report Card',
+        'school_report_card_2_years' => 'School Report Card for the Past 2 Years',
     ];
 
     /**

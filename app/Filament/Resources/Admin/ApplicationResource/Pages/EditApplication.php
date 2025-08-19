@@ -102,7 +102,7 @@ class EditApplication extends EditRecord
                 Section::make('Parent Information')
                     ->schema([
                         Grid::make(2)->schema([
-                            Section::make('Father Information')->schema([
+                            Section::make("Father's Information")->schema([
                                 TextInput::make('parent.father_first_name')
                                     ->afterStateHydrated(function ($component, $state) {
                                         if (isset($this->record->parent)) {
@@ -165,7 +165,7 @@ class EditApplication extends EditRecord
                                     ->required()
                                     ->numeric(),
                             ])->columns(4),
-                            Section::make('Mother Information')->schema([
+                            Section::make("Mother's Information")->schema([
                                 TextInput::make('parent.mother_first_name')
                                     ->afterStateHydrated(function ($component, $state) {
                                         if (isset($this->record->parent)) {

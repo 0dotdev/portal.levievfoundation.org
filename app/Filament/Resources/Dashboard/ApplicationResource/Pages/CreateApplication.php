@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Notification;
 use App\Models\User;
 use App\Notifications\ApplicationStatusNotification;
 use App\Services\ApplicationService;
+use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
 
 class CreateApplication extends CreateRecord
@@ -81,5 +82,27 @@ class CreateApplication extends CreateRecord
 
         // Call afterCreate to handle notifications and redirect
         $this->afterCreate();
+    }
+
+    /**
+     * @return array<Action | ActionGroup>
+     */
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            ...(static::canCreateAnother() ? [$this->getCreateAnotherFormAction()] : []),
+        ];
+    }
+
+    protected function getCreateFormAction(): Action
+    {
+        return Action::make('create')
+            ->label(__('Submit'))
+            ->submit('create')
+            ->keyBindings(['mod+s'])
+            ->extraAttributes([
+                'class' => 'submit-button'
+            ]);
     }
 }
