@@ -387,11 +387,11 @@ class ApplicationResource extends Resource
                     ->label('Child Name')
                     ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
                     ->searchable(['first_name', 'last_name']),
-                TextColumn::make('date_of_birth')->searchable(),
+                TextColumn::make('date_of_birth')
+                    ->label('Date of Birth')
+                    ->date('m/d/Y')
+                    ->searchable(),
                 TextColumn::make('gender')->searchable()->formatStateUsing(fn($state) => self::genders()[$state] ?? $state),
-                TextColumn::make('parent.father_first_name')
-                    ->label('Father Name')
-                    ->formatStateUsing(fn($record) => $record->parent->father_first_name  . ' ' . $record->parent->father_last_name),
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn($state) => [
@@ -431,6 +431,7 @@ class ApplicationResource extends Resource
                                 ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
                                 ->disabled(),
                             TextInput::make('date_of_birth')
+                                ->formatStateUsing(fn($state) => $state ? \Carbon\Carbon::parse($state)->format('m/d/Y') : '')
                                 ->disabled(),
                             TextInput::make('gender')
                                 ->formatStateUsing(fn($state) => ucfirst($state))
@@ -479,15 +480,18 @@ class ApplicationResource extends Resource
                                 ->label('Review Comments')
                                 ->rows(2)
                         ])->columns(3),
-                    Section::make('Student Documents')
+                    Section::make('Documents')
                         ->schema([
                             Repeater::make('documents')
-                                ->relationship('documents', fn(Builder $query) => $query->where('reference_type', 'child'))
+                                ->relationship('documents')
                                 ->schema([
                                     Grid::make(3)
                                         ->schema([
                                             Select::make('document_type')
                                                 ->options([
+                                                    'government_id' => 'Government ID',
+                                                    'marriage_certificate' => 'Marriage Certificate',
+                                                    'recent_utility_bill' => 'Recent Utility Bill',
                                                     'school_report_card_2_years' => 'School Report Card (2 Years)'
                                                 ])
                                                 ->disabled()
@@ -518,104 +522,62 @@ class ApplicationResource extends Resource
                                 ->deletable(false)
                                 ->reorderable(false),
                         ]),
-
-                    Section::make('Parent Documents')
-                        ->schema([
-                            Repeater::make('parentDocuments')
-                                ->relationship('parentDocuments')
-                                ->schema([
-                                    Grid::make(3)
-                                        ->schema([
-                                            Select::make('document_type')
-                                                ->options([
-                                                    'government_id' => 'Government ID',
-                                                    'marriage_certificate' => 'Marriage Certificate',
-                                                    'recent_utility_bill' => 'Recent Utility Bill'
-                                                ])
-                                                ->disabled()
-                                                ->dehydrated(false)
-                                                ->suffixAction(
-                                                    Action::make('preview')
-                                                        ->icon('heroicon-m-eye')
-                                                        ->label('Preview Document')
-                                                        ->url(fn($record) => $record?->getPreviewUrl())
-                                                        ->openUrlInNewTab()
-                                                        ->visible(fn($record) => $record?->getPreviewUrl() !== null)
-                                                ),
-                                            Select::make('status')
-                                                ->options([
-                                                    'pending' => 'Pending Review',
-                                                    'approved' => 'Approved',
-                                                    'rejected' => 'Rejected'
-                                                ])
-                                                ->required(),
-                                            Textarea::make('comments')
-                                                ->label('Comments')
-                                                ->rows(2)
-                                        ]),
-                                ])
-                                ->columns(1)
-                                ->addable(false)
-                                ->deletable(false)
-                                ->reorderable(false)
-
-                        ]),
                     Section::make('Parent Information')
                         ->schema([
                             Grid::make(2)->schema([
                                 Group::make([
-                                    TextInput::make('parent.father_first_name')
+                                    TextInput::make('father_first_name')
                                         ->label('Father Name')
-                                        ->formatStateUsing(fn($record) => $record->parent->father_first_name . ' ' . $record->parent->father_last_name)
+                                        ->formatStateUsing(fn($record) => $record->father_first_name . ' ' . $record->father_last_name)
                                         ->disabled(),
-                                    TextInput::make('parent.father_phone')
-                                        ->formatStateUsing(fn($record) => $record->parent->father_phone)
+                                    TextInput::make('father_phone')
+                                        ->formatStateUsing(fn($record) => $record->father_phone)
                                         ->disabled(),
-                                    TextInput::make('parent.father_email')
-                                        ->formatStateUsing(fn($record) => $record->parent->father_email)
+                                    TextInput::make('father_email')
+                                        ->formatStateUsing(fn($record) => $record->father_email)
                                         ->disabled(),
-                                    TextInput::make('parent.father_address')
+                                    TextInput::make('father_address')
                                         ->label('Address')
                                         ->formatStateUsing(fn($record) =>
-                                        $record->parent->father_address . ', ' .
-                                            $record->parent->father_city . ', ' .
-                                            $record->parent->father_state . ' ' .
-                                            $record->parent->father_pincode)
+                                        $record->father_address . ', ' .
+                                            $record->father_city . ', ' .
+                                            $record->father_state . ' ' .
+                                            $record->father_pincode)
                                         ->disabled(),
                                 ]),
                                 Group::make([
-                                    TextInput::make('parent.mother_first_name')
+                                    TextInput::make('mother_first_name')
                                         ->label('Mother Name')
-                                        ->formatStateUsing(fn($record) => $record->parent->mother_first_name . ' ' . $record->parent->mother_last_name)
+                                        ->formatStateUsing(fn($record) => $record->mother_first_name . ' ' . $record->mother_last_name)
                                         ->disabled(),
-                                    TextInput::make('parent.mother_phone')
-                                        ->formatStateUsing(fn($record) => $record->parent->mother_phone)
+                                    TextInput::make('mother_phone')
+                                        ->formatStateUsing(fn($record) => $record->mother_phone)
                                         ->disabled(),
-                                    TextInput::make('parent.mother_email')
-                                        ->formatStateUsing(fn($record) => $record->parent->mother_email)
+                                    TextInput::make('mother_email')
+                                        ->formatStateUsing(fn($record) => $record->mother_email)
                                         ->disabled(),
-                                    TextInput::make('parent.mother_address')
+                                    TextInput::make('mother_address')
                                         ->label('Address')
                                         ->formatStateUsing(fn($record) =>
-                                        $record->parent->mother_has_different_address ?
-                                            $record->parent->mother_address . ', ' .
-                                            $record->parent->mother_city . ', ' .
-                                            $record->parent->mother_state . ' ' .
-                                            $record->parent->mother_pincode
+                                        $record->mother_has_different_address ?
+                                            $record->mother_address . ', ' .
+                                            $record->mother_city . ', ' .
+                                            $record->mother_state . ' ' .
+                                            $record->mother_pincode
                                             : 'Same as Father')
                                         ->disabled(),
                                 ]),
-                                TextInput::make('parent.family_status')
+                                TextInput::make('family_status')
                                     ->label('Family Status')
-                                    ->formatStateUsing(fn($record) => ucfirst($record->parent->family_status))
+                                    ->formatStateUsing(fn($record) => ucfirst($record->family_status))
                                     ->disabled(),
                                 TextInput::make('no_of_children_in_household')
                                     ->label('No. of Children in Household')
                                     ->formatStateUsing(fn($record) => ucfirst($record->no_of_children_in_household))
                                     ->disabled(),
-                                TextInput::make('parent.synagogue_affiliation')
+                                TextInput::make('synagogue_affiliation')
                                     ->label('Synagogue Affiliation')
-                                    ->formatStateUsing(fn($record) => $record->parent->synagogue_affiliation)
+                                    ->formatStateUsing(fn($record) => $record->synagogue_affiliation)
                                     ->disabled(),
                             ]),
 

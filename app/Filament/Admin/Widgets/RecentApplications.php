@@ -43,12 +43,6 @@ class RecentApplications extends BaseWidget
                     ->searchable(['first_name', 'last_name']),
                 TextColumn::make('date_of_birth')->searchable(),
                 TextColumn::make('gender')->searchable()->formatStateUsing(fn($state) => self::genders()[$state] ?? $state),
-                TextColumn::make('parent.father_first_name')
-                    ->label('Father Name')
-                    ->formatStateUsing(fn($record) => $record->parent->father_first_name  . ' ' . $record->parent->father_last_name),
-                TextColumn::make('parent.mother_first_name')
-                    ->label('Mother Name')
-                    ->formatStateUsing(fn($record) => $record->parent->mother_first_name  . ' ' . $record->parent->mother_last_name),
 
                 TextColumn::make('current_school_name')->label('Current School')->description(fn($record): string => $record->current_school_location)->searchable(),
                 TextColumn::make('current_grade')->searchable(),
