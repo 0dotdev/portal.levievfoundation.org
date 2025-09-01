@@ -124,7 +124,7 @@ class ApplicationResource extends Resource
                                 DatePicker::make('date_of_birth')->label('Date of Birth')->maxDate(now())->minDate(now()->subYears(30))->required(),
                                 Select::make('gender')->label('Gender')->options(static::genders())->required(),
                                 TextInput::make('current_school_name')->label('Current School Name')->required(),
-                                Select::make('current_school_location')->label('Current School Location')->options(self::states())->required(),
+                                Select::make('current_school_location')->label('Current School Location')->options(self::states())->required()->default('New York'),
                                 Select::make('current_grade')->label('Current Grade')->options(self::schoolGrades())->required(),
                                 Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(4),
                                 Group::make([
@@ -384,9 +384,13 @@ class ApplicationResource extends Resource
             ->columns([
                 TextColumn::make('id')->label('ID')->sortable(),
                 TextColumn::make('first_name')
-                    ->label('Child Name')
-                    ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
-                    ->searchable(['first_name', 'last_name']),
+                    ->label('First Name')
+                    ->formatStateUsing(fn($record) => $record->first_name)
+                    ->searchable(['first_name']),
+                TextColumn::make('last_name')
+                    ->label('Last Name')
+                    ->formatStateUsing(fn($record) => $record->last_name)
+                    ->searchable(['last_name']),
                 TextColumn::make('date_of_birth')
                     ->label('Date of Birth')
                     ->date('m/d/Y')
@@ -427,8 +431,12 @@ class ApplicationResource extends Resource
                     Section::make('Applicant Information')
                         ->schema([
                             TextInput::make('first_name')
-                                ->label('Full Name')
-                                ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
+                                ->label('First Name')
+                                ->formatStateUsing(fn($record) => $record->first_name)
+                                ->disabled(),
+                            TextInput::make('last_name')
+                                ->label('Last Name')
+                                ->formatStateUsing(fn($record) => $record->last_name)
                                 ->disabled(),
                             TextInput::make('date_of_birth')
                                 ->formatStateUsing(fn($state) => $state ? \Carbon\Carbon::parse($state)->format('m/d/Y') : '')

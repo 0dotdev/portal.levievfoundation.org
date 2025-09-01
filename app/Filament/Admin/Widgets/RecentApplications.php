@@ -38,9 +38,13 @@ class RecentApplications extends BaseWidget
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
                 TextColumn::make('first_name')
-                    ->label('Child Name')
-                    ->formatStateUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
-                    ->searchable(['first_name', 'last_name']),
+                    ->label('First Name')
+                    ->formatStateUsing(fn($record) => $record->first_name)
+                    ->searchable(['first_name']),
+                TextColumn::make('last_name')
+                    ->label('Last Name')
+                    ->formatStateUsing(fn($record) => $record->last_name)
+                    ->searchable(['last_name']),
                 TextColumn::make('date_of_birth')->searchable(),
                 TextColumn::make('gender')->searchable()->formatStateUsing(fn($state) => self::genders()[$state] ?? $state),
 

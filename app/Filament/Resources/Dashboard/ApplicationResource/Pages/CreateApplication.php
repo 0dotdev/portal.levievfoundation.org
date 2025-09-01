@@ -120,7 +120,7 @@ class CreateApplication extends CreateRecord
     protected function getCreateFormAction(): Action
     {
         return Action::make('create')
-            ->label(__('Submit'))
+            ->label(__('Submit Application'))
             ->submit('create')
             ->keyBindings(['mod+s'])
             ->extraAttributes([
