@@ -5,9 +5,7 @@ namespace App\Filament\Resources\Admin\ApplicationResource\Pages;
 use App\Filament\Resources\Admin\ApplicationResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Notification;
 use App\Notifications\ApplicationStatusNotification;
-use App\Models\User;
 use App\Traits\CommonTrait;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Checkbox;
@@ -178,7 +176,6 @@ class EditApplication extends EditRecord
                             ->deletable(false)
                             ->reorderable(false),
                     ]),
-
                 Section::make('Application Status')
                     ->schema([
                         Select::make('status')
@@ -190,11 +187,26 @@ class EditApplication extends EditRecord
             ]);
     }
 
+    // Store original document statuses before save
+    protected array $originalDocumentStatuses = [];
+
     protected function beforeSave(): void
     {
         // Update the reviewed_at and reviewed_by fields
         $this->record->reviewed_at = now();
         $this->record->reviewed_by = \Illuminate\Support\Facades\Auth::id();
+
+        // Store original document statuses
+        $this->originalDocumentStatuses = $this->record->documents()->pluck('status', 'id')->toArray();
+
+        // If a new document is uploaded, set its status to 'pending'
+        if ($this->record->documents && is_iterable($this->record->documents)) {
+            foreach ($this->record->documents as $doc) {
+                if (!empty($doc->new_document)) {
+                    $doc->status = 'pending';
+                }
+            }
+        }
     }
 
     protected function afterSave(): void
@@ -212,13 +224,29 @@ class EditApplication extends EditRecord
             $record->save();
         }
 
-        // Send notifications based on status changes
-        if (in_array($record->status, ['submitted', 'resubmitted'])) {
-            $admins = User::where('roles', 'admin')->get();
-            Notification::send($admins, new ApplicationStatusNotification(
-                'New Application Received',
-                'An application has been ' . $record->status . ' by ' . optional($record->user)->name,
-                url('/admin/admin/applications/' . $record->id . '/edit')
+        // Only notify about rejected documents if any document's status was changed to 'rejected'
+        $currentStatuses = $record->documents()->pluck('status', 'id')->toArray();
+        $newlyRejectedIds = [];
+        foreach ($currentStatuses as $id => $status) {
+            if (($this->originalDocumentStatuses[$id] ?? null) !== 'rejected' && $status === 'rejected') {
+                $newlyRejectedIds[] = $id;
+            }
+        }
+        if (count($newlyRejectedIds) > 0) {
+            $rejectedDocuments = $record->documents()->whereIn('id', $newlyRejectedIds)->get();
+            $rejectedNames = $rejectedDocuments->map(function ($doc) {
+                $types = [
+                    'government_id' => 'Government ID',
+                    'marriage_certificate' => 'Marriage Certificate',
+                    'recent_utility_bill' => 'Recent Utility Bill',
+                    'school_report_card_2_years' => 'School Report Card (2 Years)'
+                ];
+                return $types[$doc->document_type] ?? ucfirst(str_replace('_', ' ', $doc->document_type));
+            })->implode(', ');
+            optional($record->user)->notify(new ApplicationStatusNotification(
+                'Document Rejected',
+                'The following document(s) were rejected: ' . $rejectedNames . '. Please review and re-upload.',
+                url('/dashboard/applications')
             ));
         }
 
