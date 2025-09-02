@@ -143,7 +143,14 @@ class ApplicationResource extends Resource
                             ->schema([
                                 TextInput::make('first_name')->label('First Name')->required(),
                                 TextInput::make('last_name')->label('Last Name')->required(),
-                                DatePicker::make('date_of_birth')->label('Date of Birth')->maxDate(now())->minDate(now()->subYears(30))->required(),
+                                DatePicker::make('date_of_birth')
+                                    ->label('Date of Birth')
+                                    ->maxDate(now()) // not after today
+                                    ->required()
+                                    ->rule('after_or_equal:1900-01-01')
+                                    ->validationMessages([
+                                        'after_or_equal' => 'The selected date is not valid.',
+                                    ]),
                                 Select::make('gender')->label('Gender')->options(static::genders())->required(),
                                 TextInput::make('current_school_name')->label('Current School Name')->required(),
                                 Select::make('current_school_location')->label('Current School Location')->options(self::states())->required()->default('New York'),
