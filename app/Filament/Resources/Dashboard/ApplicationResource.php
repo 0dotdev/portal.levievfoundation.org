@@ -624,6 +624,8 @@ class ApplicationResource extends Resource
                             ]),
                     ]),
             ])
+            ->emptyStateHeading('You have no current applications.')
+            ->emptyStateDescription('Please start new application')
             ->bulkActions([]);
     }
 
