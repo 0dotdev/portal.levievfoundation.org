@@ -155,7 +155,7 @@ class ApplicationResource extends Resource
                                 TextInput::make('current_school_name')->label('Current School Name')->required(),
                                 Select::make('current_school_location')->label('Current School Location')->options(self::states())->required()->default('New York'),
                                 Select::make('current_grade')->label('Current Grade')->options(self::schoolGrades())->required(),
-                                Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(4),
+                                Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(['md' => 1, 'lg' => 4]),
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
                                     Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
@@ -181,7 +181,7 @@ class ApplicationResource extends Resource
                             ->itemLabel(function ($state, $livewire) {
                                 return 'Child Info';
                             })
-                            ->columns(4)
+                            ->columns(['md' => 2, 'xl' => 4])
                     ]),
                     Step::make('Documents')->schema(
                         fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord

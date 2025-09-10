@@ -54,7 +54,7 @@ class ApplicationResource extends Resource
                 Wizard::make([
                     Step::make('Parent Information')->schema([
                         Section::make("Father's Information")->columns([
-                            'sm' => 3,
+                            'sm' => 2,
                             'xl' => 4,
                         ])->schema([
                             TextInput::make('father_first_name')->label('First Name')->required(),
@@ -106,11 +106,36 @@ class ApplicationResource extends Resource
                             Select::make('family_status')
                                 ->options(self::familyStatuses())
                                 ->required()->default('married'),
+                            Select::make('no_of_children_in_household')
+                                ->label('Number of children in household')
+                                ->options(self::householdChildren())
+                                ->required()
+                                ->reactive()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if (is_numeric($state)) {
+                                        $set('children', array_fill(0, (int)$state, []));
+                                    }
+                                }),
+                            TextInput::make('synagogue_affiliation')
+                                ->placeholder(' Please enter name and address.')
+                                ->label('Affiliated with any synagogues?')
+                                ->required(),
+                        ]),
+                        Section::make('Family Information')->columns([
+                            'sm' => 3,
+                            'xl' => 4,
+                        ])->schema([
+                            Select::make('family_status')
+                                ->options(self::familyStatuses())
+                                ->required()->default('married'),
                             Select::make('no_of_children_in_household')->label('Number of children in household')->options(self::householdChildren())->required(),
                             TextInput::make('synagogue_affiliation')
                                 ->placeholder(' Please enter name and address.')
                                 ->label('Affiliated with any synagogues?')
-                                ->columnSpan(2)
+                                ->columnSpan([
+                                    'sm' => 3,
+                                    'xl' => 4,
+                                ])
                                 ->required(),
                         ]),
                     ]),
@@ -133,7 +158,7 @@ class ApplicationResource extends Resource
                                 TextInput::make('current_school_name')->label('Current School Name')->required(),
                                 Select::make('current_school_location')->label('Current School Location')->options(self::states())->required()->default('New York'),
                                 Select::make('current_grade')->label('Current Grade')->options(self::schoolGrades())->required(),
-                                Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(4),
+                                Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(['md' => 1, 'lg' => 4]),
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
                                     Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
@@ -151,7 +176,7 @@ class ApplicationResource extends Resource
 
                                 ])->columns(3)->visible(fn(callable $get) => $get('is_applying_for_grant'))->columnSpanFull(),
                             ])->defaultItems(fn(callable $get) => (int) $get('no_of_children_in_household') ?: 1)
-                            ->columns(4)
+                            ->columns(['md' => 2, 'xl' => 4])
                     ]),
                     Step::make('Documents')->schema(
                         fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord
