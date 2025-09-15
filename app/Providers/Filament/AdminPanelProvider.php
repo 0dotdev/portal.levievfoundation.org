@@ -35,6 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Leviev Foundation')
             ->brandLogo(fn() => view('components.filament.admin.brand'))
+            ->homeUrl("https://levievfoundation.org")
             ->favicon(asset('images/logo.jpg'))
             ->emailVerification()
             ->passwordReset()
