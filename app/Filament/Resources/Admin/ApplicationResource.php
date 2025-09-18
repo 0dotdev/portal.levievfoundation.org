@@ -33,6 +33,7 @@ use App\Traits\CommonTrait;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\ViewField;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
@@ -365,7 +366,6 @@ class ApplicationResource extends Resource
                             ]
                     ),
                     Step::make('Declaration')->schema([
-
                         Checkbox::make('info_is_true')
                             ->label('I declare that all information provided is true and accurate.')
                             ->rule('accepted')
@@ -406,7 +406,17 @@ class ApplicationResource extends Resource
 
 
                     ]),
-                ])->columnSpanFull(),
+                    Step::make('Review')->schema([
+                        ViewField::make('preview')
+                            ->view('filament.previews.application_preview')
+                            ->columnSpanFull(),
+
+                    ]),
+                ])->columnSpanFull()->nextAction(
+                    fn(Action $action) => $action->label('Proceed to Next Step'),
+                )->previousAction(
+                    fn(Action $action) => $action->label('Back to Previous Step'),
+                )->submitAction(new HtmlString('<button class="bg-primary-600 btn-submit-visible fi-ac-action fi-btn fi-btn-size-md fi-size-md focus-visible:ring-2 font-semibold inline-grid outline-none px-3 py-2 relative rounded-lg bg-primary-600 text-white" type="submit">Submit Application</button>'))
             ]);
     }
 

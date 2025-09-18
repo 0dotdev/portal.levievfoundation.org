@@ -9,12 +9,22 @@ header.fi-section-header,
 }
 
 .fi-ac-action.submit-button {
-    margin: auto;
-    font-size: 17px;
-    padding: 10px 20px;
     display: none !important;
 }
 
+/* 
 .fi-ac-action.btn-submit-visible {
     display: block !important;
+} */
+
+div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-item-header {
+    background: rgba(var(--primary-600), var(--tw-text-opacity, 1));
+}
+
+div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-item-header svg {
+    color: #fff;
+}
+
+div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-item-header h4 {
+    color: white;
 }
