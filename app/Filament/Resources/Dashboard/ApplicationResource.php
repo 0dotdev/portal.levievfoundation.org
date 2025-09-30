@@ -160,8 +160,10 @@ class ApplicationResource extends Resource
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
                                     Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
-                                    Checkbox::make('attended_school_past_year')
-                                        ->label('Have you started the application process to this school'),
+                                    Select::make('attended_school_past_year')->label('Have you started the application process to this school')->options([
+                                        1 => 'Yes',
+                                        0 => 'No'
+                                    ]),
                                     FileUpload::make('recent_report_card')
                                         ->label('School Report Card for the Past 2 Years')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
