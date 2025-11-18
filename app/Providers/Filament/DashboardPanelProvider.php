@@ -38,12 +38,13 @@ class DashboardPanelProvider extends PanelProvider
             ->default()
             ->id('dashboard')
             ->path('dashboard')
+            ->globalSearch(false)
             ->login()
             ->brandName('Leviev Foundation')
             ->brandLogo(fn() => view('components.filament.admin.brand'))
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
-                fn(): string => '<a href="https://levievfoundation.org/grant-program/" target="_blank" class="px-4 py-1 text-sm font-medium text-gray-700 underline hover:text-primary-600">Instructions/Eligibility ➡️</a>'
+                fn(): string => '<a href="https://levievfoundation.org/grant-program/" target="_blank" class="font-medium px-4 py-1 text-gray-700 text-sm">➡️ Instructions/Eligibility</a>'
             )
             ->homeUrl("https://levievfoundation.org")
             ->favicon(asset('images/favicon.jpg'))

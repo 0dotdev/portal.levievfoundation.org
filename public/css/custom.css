@@ -21,6 +21,10 @@ div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-it
     background: rgba(var(--primary-600), var(--tw-text-opacity, 1));
 }
 
+div#children-information .fi-fo-repeater-item:nth-child(odd) .fi-fo-repeater-item-content {
+    background: #f2f2f2;
+}
+
 div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-item-header svg {
     color: #fff;
 }

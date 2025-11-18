@@ -160,12 +160,12 @@ class ApplicationResource extends Resource
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
                                     Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
-                                    Select::make('attended_school_past_year')->label('Have you started the application process to this school')->options([
+                                    Select::make('attended_school_past_year')->label('Have You Started the Application Process for This School')->options([
                                         1 => 'Yes',
                                         0 => 'No'
-                                    ]),
+                                    ])->required(),
                                     FileUpload::make('recent_report_card')
-                                        ->label('School Report Card for the Past 2 Years')
+                                        ->label('Please Upload the School Report Card for the Past 2 Years')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -191,7 +191,7 @@ class ApplicationResource extends Resource
                             ? [
                                 Grid::make(3)->schema([
                                     FileUpload::make('government_id')
-                                        ->label('Government ID')
+                                        ->label('Government ID (Passport or Driver License)')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -225,7 +225,7 @@ class ApplicationResource extends Resource
                             : [
                                 Grid::make(2)->schema([
                                     FileUpload::make('government_id')
-                                        ->label('Government ID')
+                                        ->label('Government ID (Passport or Driver License)')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -254,7 +254,7 @@ class ApplicationResource extends Resource
                                             ->disabled(fn($record) => $record && $record->status === 'fix_needed'),
                                     ]),
                                     FileUpload::make('recent_report_card')
-                                        ->label('School Report Card for the Past 2 Years')
+                                        ->label('Please Upload the School Report Card for the Past 2 Years')
                                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
                                         ->maxSize(10240)
                                         ->multiple()
@@ -525,7 +525,7 @@ class ApplicationResource extends Resource
                                     })
                                     ->disabled(),
                                 TextInput::make('attended_school_past_year')
-                                    ->label('Have you started the application process to this school')
+                                    ->label('Have You Started the Application Process for This School')
                                     ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
                                     ->disabled(),
                                 TextInput::make('status')

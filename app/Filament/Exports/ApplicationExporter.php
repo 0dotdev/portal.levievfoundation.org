@@ -36,7 +36,7 @@ class ApplicationExporter extends Exporter
             ExportColumn::make('family_status')->label('Family Status'),
             ExportColumn::make('no_of_children_in_household')->label('No. of Children in Household'),
             ExportColumn::make('synagogue_affiliation')->label('Synagogue Affiliation'),
-            // ExportColumn::make('government_id')->label('Government ID')
+            // ExportColumn::make('government_id')->label('Government ID (Passport or Driver License)')
             //     ->formatStateUsing(fn($state) => $state ? static::getGoogleDriveUrl($state) : null),
             // ExportColumn::make('marriage_certificate')
             //     ->formatStateUsing(fn($state) => $state ? static::getGoogleDriveUrl($state) : null),
