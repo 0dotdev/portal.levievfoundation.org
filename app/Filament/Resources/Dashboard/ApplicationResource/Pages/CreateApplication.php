@@ -67,7 +67,7 @@ class CreateApplication extends CreateRecord
 
         // Cleanup session and redirect
         session()->forget('created_applications');
-        $this->redirect('/dashboard/thank-you');
+        $this->redirect('/dashboard/applications');
     }
 
     public function mount(): void
@@ -77,7 +77,7 @@ class CreateApplication extends CreateRecord
         // Check if we need to redirect to thank you page
         if (session()->has('redirect_to_thank_you')) {
             session()->forget('redirect_to_thank_you');
-            $this->redirect('/dashboard/thank-you');
+            $this->redirect('/dashboard/applications');
         }
     }
 

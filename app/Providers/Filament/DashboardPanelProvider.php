@@ -46,7 +46,7 @@ class DashboardPanelProvider extends PanelProvider
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
                 fn(): string => '<a href="https://levievfoundation.org/grant-program/" target="_blank" class="font-medium px-4 py-1 text-gray-700 text-sm">➡️ Instructions/Eligibility</a>'
             )
-            ->homeUrl("https://levievfoundation.org")
+            ->homeUrl("/dashboard")
             ->favicon(asset('images/favicon.jpg'))
             ->registration()
             ->emailVerification()
