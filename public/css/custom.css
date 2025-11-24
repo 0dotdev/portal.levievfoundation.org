@@ -32,3 +32,28 @@ div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-it
 div#children-information .fi-fo-repeater-item:nth-child(even) .fi-fo-repeater-item-header h4 {
     color: white;
 }
+
+.create-application-note {
+    position: absolute;
+    left: 0;
+    padding: 10px;
+    background: white;
+    border: 1px solid #af8b63;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    .fi-page.fi-resource-create-record-page.fi-resource-applications header {
+        padding-bottom: 50px;
+        position: relative;
+    }
+}
+
+@media (max-width: 767px) {
+    .create-application-note {
+        position: relative;
+        bottom: 0;
+    }
+}

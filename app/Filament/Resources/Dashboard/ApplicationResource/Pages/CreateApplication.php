@@ -127,4 +127,13 @@ class CreateApplication extends CreateRecord
                 'class' => 'submit-button'
             ]);
     }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('note')
+                ->label('') // no button label
+                ->view('filament.create-application-note')
+        ];
+    }
 }
