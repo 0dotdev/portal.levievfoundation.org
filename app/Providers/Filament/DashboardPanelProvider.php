@@ -25,6 +25,8 @@ use Filament\Navigation\NavigationBuilder;
 use Filament\Navigation\NavigationItem;
 use App\Filament\Pages\Dashboard\ThankYou;
 use App\Http\Middleware\RefreshGoogleDriveToken;
+use Filament\Pages\Auth\EditProfile;
+use Filament\Pages\Auth\Login;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -51,6 +53,7 @@ class DashboardPanelProvider extends PanelProvider
             ->registration()
             ->emailVerification()
             ->passwordReset()
+            ->profile()
             ->sidebarWidth('13rem')
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([
