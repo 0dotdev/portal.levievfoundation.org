@@ -49,14 +49,14 @@ class CreateApplication extends CreateRecord
         }
 
         // Create user notification message
-        $notificationMessage = 'Your applications have been submitted successfully. ';
-        if ($childrenApplyingForGrants > 0) {
-            $notificationMessage .= "We received {$childrenApplyingForGrants} grant application(s).";
-        }
+        $notificationMessage = "Your application has been submitted successfully.\n\n";
+        $notificationMessage .= "We have received {$childrenApplyingForGrants} grant " . ($childrenApplyingForGrants === 1 ? 'application.' : 'applications.');
+
         if ($childrenNotApplying > 0) {
-            $notificationMessage .= " {$childrenNotApplying} child(ren) were not applying for grants, so no applications were created for them.";
+            $notificationMessage .= "\n{$childrenNotApplying} " . ($childrenNotApplying === 1 ? 'child was' : 'children were') . ' not included in any grant application, so no application was created for them.';
         }
-        $notificationMessage .= ' Please wait for our response.';
+
+        $notificationMessage .= "\n\nPlease wait while we review your submission. We will notify you once there is an update.";
 
         // Notify the user
         Auth::user()->notify(new ApplicationStatusNotification(

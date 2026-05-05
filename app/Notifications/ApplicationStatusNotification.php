@@ -36,15 +36,15 @@ class ApplicationStatusNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        Log::info('Sending application status notification email', [
-            'to' => $notifiable->email,
-            'title' => $this->title,
-            'message' => $this->message
-        ]);
 
         $mail = (new MailMessage)
             ->subject($this->title)
-            ->line($this->message);
+            ->greeting('');
+
+        $lines = preg_split('/\r\n|\r|\n/', $this->message);
+        foreach ($lines as $line) {
+            $mail->line($line === '' ? ' ' : $line);
+        }
 
         if ($this->url) {
             $mail->action('View Details', $this->url);
