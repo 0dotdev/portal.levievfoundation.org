@@ -6,11 +6,11 @@ use App\Filament\Resources\Dashboard\ApplicationResource;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Notification;
-use App\Models\User;
 use App\Notifications\ApplicationStatusNotification;
 use App\Services\ApplicationService;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CreateApplication extends CreateRecord
 {
@@ -38,10 +38,11 @@ class CreateApplication extends CreateRecord
         $childrenApplyingForGrants = $result['children_applying_for_grants'] ?? 0;
         $childrenNotApplying = $result['children_not_applying'] ?? 0;
 
-        // Notify all admins
-        $admins = User::where('roles', 'admin')->get();
+        // Notify hardcoded admin emails
+        $adminEmails = ['bukhariancongres@gmail.com', 'alephagencyplus@gmail.com'];
+
         foreach ($applications as $application) {
-            Notification::send($admins, new ApplicationStatusNotification(
+            Notification::route('mail', $adminEmails)->notify(new ApplicationStatusNotification(
                 'New Application Submitted',
                 'A new application has been submitted by ' . Auth::user()->name,
                 url('/admin/admin/applications/' . $application->id . '/edit')
