@@ -93,8 +93,7 @@ class EditApplication extends EditRecord
                             ->required(function (callable $get) {
                                 $schools = $get('school_wish_to_apply_in') ?? [];
                                 return in_array('School Not Listed / Other', $schools);
-                            })
-                            ->columnSpanFull(),
+                            }),
                     ])->columns(3),
 
                 Section::make('Parent Information')

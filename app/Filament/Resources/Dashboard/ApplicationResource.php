@@ -177,8 +177,7 @@ class ApplicationResource extends Resource
                                         ->required(function (callable $get) {
                                             $schools = $get('school_wish_to_apply_in') ?? [];
                                             return in_array('School Not Listed / Other', $schools);
-                                        })
-                                        ->columnSpanFull(),
+                                        }),
                                     Select::make('attended_school_past_year')->label('Have You Started the Application Process for This School')->options([
                                         1 => 'Yes',
                                         0 => 'No'
