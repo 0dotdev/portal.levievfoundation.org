@@ -122,23 +122,6 @@ class ApplicationResource extends Resource
                                 ->label('Affiliated with any synagogues?')
                                 ->required(),
                         ]),
-                        Section::make('Family Information')->columns([
-                            'sm' => 3,
-                            'xl' => 4,
-                        ])->schema([
-                            Select::make('family_status')
-                                ->options(self::familyStatuses())
-                                ->required()->default('married'),
-                            Select::make('no_of_children_in_household')->label('Number of children in household')->options(self::householdChildren())->required(),
-                            TextInput::make('synagogue_affiliation')
-                                ->placeholder(' Please enter name and address.')
-                                ->label('Affiliated with any synagogues?')
-                                ->columnSpan([
-                                    'sm' => 3,
-                                    'xl' => 4,
-                                ])
-                                ->required(),
-                        ]),
                     ]),
                     Step::make('Children Information')->schema([
                         Repeater::make('children')
