@@ -168,6 +168,10 @@ trait CommonTrait
             "Chabad of Northeast Queens" => "Chabad of Northeast Queens",
             "Shevach High School for Girls" => "Shevach High School for Girls",
             "Queens Hebrew Academy" => "Queens Hebrew Academy",
+            "Westchester Hebrew High School" => "Westchester Hebrew High School",
+            "The Richard and Jean Katz High School for Girls" => "The Richard and Jean Katz High School for Girls",
+            "Torah Day School of Atlanta" => "Torah Day School of Atlanta",
+            "School Not Listed / Other" => "School Not Listed / Other",
         ];
     }
     static function applyingYears(): array

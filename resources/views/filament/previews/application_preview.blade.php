@@ -63,6 +63,9 @@
                     Wish to Apply In:
                     {{ !empty($child['school_wish_to_apply_in']) ? implode(', ', (array) $child['school_wish_to_apply_in']) : '' }}
                 </li>
+                @if(!empty($child['custom_school_details']))
+                <li>School Name with Address: {{ $child['custom_school_details'] }}</li>
+                @endif
                 <li>Have You Started the Application Process for This School: {{ isset($child['attended_school_past_year']) ? ($child['attended_school_past_year'] ? 'Yes' : 'No') : '' }}</li>
                 @endif
             </ul>

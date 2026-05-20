@@ -71,9 +71,11 @@ class EditApplication extends EditRecord
                             ->required()
                             ->searchable()
                             ->preload()
+                            ->optionsLimit(100)
                             ->native(false)
                             ->visible(fn($record) => $record->is_applying_for_grant)
                             ->maxItems(3)
+                            ->reactive()
                             ->default(fn($record) => $record->school_wish_to_apply_in ?? [])
                             ->afterStateHydrated(function ($component, $state) {
                                 if (is_string($state)) {
@@ -81,6 +83,18 @@ class EditApplication extends EditRecord
                                     $component->state($state);
                                 }
                             }),
+                        TextInput::make('custom_school_details')
+                            ->label('School Name with Address')
+                            ->placeholder('Enter school name and address')
+                            ->visible(function (callable $get) {
+                                $schools = $get('school_wish_to_apply_in') ?? [];
+                                return in_array('School Not Listed / Other', $schools);
+                            })
+                            ->required(function (callable $get) {
+                                $schools = $get('school_wish_to_apply_in') ?? [];
+                                return in_array('School Not Listed / Other', $schools);
+                            })
+                            ->columnSpanFull(),
                     ])->columns(3),
 
                 Section::make('Parent Information')
@@ -257,5 +271,10 @@ class EditApplication extends EditRecord
                 url('/dashboard/applications')
             ));
         }
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return $data;
     }
 }

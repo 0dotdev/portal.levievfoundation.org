@@ -162,7 +162,26 @@ class ApplicationResource extends Resource
                                 Checkbox::make('is_applying_for_grant')->label('Is this student applying for grant?')->reactive()->columnSpan(['md' => 1, 'lg' => 4]),
                                 Group::make([
                                     Select::make('school_year_applying_for')->label('School Year Applying For')->options(self::applyingYears())->required(),
-                                    Select::make('school_wish_to_apply_in')->label('Schools You Wish to Apply To')->multiple()->maxItems(3)->options(self::applyingSchools())->required(),
+                                    Select::make('school_wish_to_apply_in')
+                                        ->label('Schools You Wish to Apply To')
+                                        ->multiple()
+                                        ->maxItems(3)
+                                        ->options(self::applyingSchools())
+                                        ->optionsLimit(100)
+                                        ->required()
+                                        ->reactive(),
+                                    TextInput::make('custom_school_details')
+                                        ->label('School Name with Address')
+                                        ->placeholder('Enter school name and address')
+                                        ->visible(function (callable $get) {
+                                            $schools = $get('school_wish_to_apply_in') ?? [];
+                                            return in_array('School Not Listed / Other', $schools);
+                                        })
+                                        ->required(function (callable $get) {
+                                            $schools = $get('school_wish_to_apply_in') ?? [];
+                                            return in_array('School Not Listed / Other', $schools);
+                                        })
+                                        ->columnSpanFull(),
                                     Checkbox::make('attended_school_past_year')
                                         ->label('Have You Started the Application Process for This School'),
                                     FileUpload::make('recent_report_card')
@@ -519,6 +538,10 @@ class ApplicationResource extends Resource
                                     return implode(', ', $decoded);
                                 })
                                 ->disabled(),
+                            TextInput::make('custom_school_details')
+                                ->label('School Name with Address (Other)')
+                                ->disabled()
+                                ->visible(fn($record) => !empty($record->custom_school_details)),
                             TextInput::make('attended_school_past_year')
                                 // ->label('attended_school_past_year')
                                 ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')

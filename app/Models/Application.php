@@ -18,6 +18,7 @@ class Application extends Model
         'current_grade',
         'school_year_applying_for',
         'school_wish_to_apply_in',
+        'custom_school_details',
         'is_applying_for_grant',
         'attended_school_past_year',
         // Parent Information

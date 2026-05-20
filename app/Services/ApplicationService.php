@@ -76,6 +76,7 @@ class ApplicationService
             'current_grade' => $childData['current_grade'],
             'school_year_applying_for' => $childData['school_year_applying_for'] ?? null,
             'school_wish_to_apply_in' => $childData['school_wish_to_apply_in'] ?? [],
+            'custom_school_details' => $childData['custom_school_details'] ?? null,
             'is_applying_for_grant' => $childData['is_applying_for_grant'] ?? true,
             'attended_school_past_year' => $childData['attended_school_past_year'] ?? false,
             // Parent Information

@@ -10,7 +10,6 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Services\ApplicationService;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class CreateApplication extends CreateRecord
 {

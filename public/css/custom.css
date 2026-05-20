@@ -1,12 +1,15 @@
 header.fi-section-header,
 .fi-fo-repeater-item-header {
     background: #f4f4f5;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 
+/* 
 .fi-section,
 .fi-fo-repeater-item {
     overflow: hidden;
-}
+} */
 
 .fi-ac-action.submit-button {
     display: none !important;
