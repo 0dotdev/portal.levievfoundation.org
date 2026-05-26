@@ -488,8 +488,12 @@ class ApplicationResource extends Resource
                                 ->formatStateUsing(fn($state) => ucfirst($state))
                                 ->disabled(),
                             TextInput::make('current_school_name')
-                                ->label('Current School')
+                                ->label('Current School Name')
                                 ->formatStateUsing(fn($record) => $record->current_school_name . ' (' . $record->current_school_location . ')')
+                                ->disabled(),
+                            TextInput::make('current_school_location')
+                                ->label('Current School Location')
+                                ->formatStateUsing(fn($record) => $record->current_school_location)
                                 ->disabled(),
                             TextInput::make('current_grade')
                                 ->disabled(),
@@ -519,6 +523,10 @@ class ApplicationResource extends Resource
 
                                     return implode(', ', $decoded);
                                 })
+                                ->disabled(),
+                            TextInput::make('attended_school_past_year')
+                                ->label('Have You Started the Application Process for This School')
+                                ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
                                 ->disabled(),
                             TextInput::make('custom_school_details')
                                 ->label('School Name with Address (Other)')

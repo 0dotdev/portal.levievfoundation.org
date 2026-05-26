@@ -510,8 +510,12 @@ class ApplicationResource extends Resource
                                     ->formatStateUsing(fn($state) => ucfirst($state))
                                     ->disabled(),
                                 TextInput::make('current_school_name')
-                                    ->label('Current School')
+                                    ->label('Current School Name')
                                     ->formatStateUsing(fn($record) => $record->current_school_name . ' (' . $record->current_school_location . ')')
+                                    ->disabled(),
+                                TextInput::make('current_school_location')
+                                    ->label('Current School Location')
+                                    ->formatStateUsing(fn($record) => $record->current_school_location)
                                     ->disabled(),
                                 TextInput::make('current_grade')
                                     ->disabled(),

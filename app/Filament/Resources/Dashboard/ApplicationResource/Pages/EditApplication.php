@@ -97,6 +97,8 @@ class EditApplication extends EditRecord
                                     $component->state($state);
                                 }
                             }),
+                        Checkbox::make('attended_school_past_year')
+                            ->label('Have You Started the Application Process for This School'),
                         TextInput::make('custom_school_details')
                             ->label('School Name with Address')
                             ->placeholder('Enter school name and address')
