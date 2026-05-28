@@ -202,4 +202,9 @@ trait CommonTrait
             'info' => 'resubmitted',
         ];
     }
+
+    static function adminEmails(): array
+    {
+        return ['bukhariancongres@gmail.com', 'alephagencyplus@gmail.com', 'info@levievfoundation.org'];
+    }
 }

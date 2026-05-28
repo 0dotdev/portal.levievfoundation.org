@@ -6,10 +6,12 @@ use App\Filament\Resources\Dashboard\ApplicationResource;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
+use App\Models\Document;
 use App\Models\User;
 use Filament\Actions;
 use App\Notifications\ApplicationStatusNotification;
 use App\Traits\CommonTrait;
+use Filament\Notifications\Notification as FilamentNotification;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
@@ -26,9 +28,12 @@ use Filament\Forms\Components\Placeholder;
 
 class EditApplication extends EditRecord
 {
-
     use CommonTrait;
+
     protected static string $resource = ApplicationResource::class;
+
+    // Captures document file paths before save so afterSave() can detect which were re-uploaded
+    protected array $originalDocumentFilePaths = [];
 
     public function mount($record): void
     {
@@ -197,10 +202,12 @@ class EditApplication extends EditRecord
                                         Placeholder::make('comments_info')
                                             ->label('Review Comments')
                                             ->content(fn($record) => $record->comments ?? '-'),
-                                        FileUpload::make('new_document')
+                                        FileUpload::make('file_path')
                                             ->label('Upload New Document')
-                                            ->visible(fn($get) => $get('status') === 'rejected')
-                                            ->directory('documents/reuploads'),
+                                            ->visible(fn($record) => $record?->status === 'rejected')
+                                            ->directory('documents/reuploads')
+                                            ->afterStateHydrated(fn($component) => $component->state(null))
+                                            ->dehydrated(fn($state) => filled($state)),
                                     ])
                             ])
                             ->addable(false)
@@ -216,6 +223,31 @@ class EditApplication extends EditRecord
                     ])->columns(1),
             ]);
     }
+    protected function getSavedNotification(): ?FilamentNotification
+    {
+        // If documents were re-uploaded, afterSave() sends its own notification.
+        // Return null here to suppress the default "Saved" toast in that case.
+        if (count($this->originalDocumentFilePaths) > 0) {
+            $currentPaths = $this->record->documents()->pluck('file_path', 'id')->toArray();
+            foreach ($currentPaths as $id => $path) {
+                if (($this->originalDocumentFilePaths[$id] ?? null) !== $path) {
+                    return null;
+                }
+            }
+        }
+
+        return FilamentNotification::make()->title('Saved')->success();
+    }
+
+    protected function beforeSave(): void
+    {
+        // Snapshot current file paths before Filament saves the relationship.
+        // afterSave() compares against this to find which documents were re-uploaded.
+        $this->originalDocumentFilePaths = $this->record->documents()
+            ->pluck('file_path', 'id')
+            ->toArray();
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $data['school_wish_to_apply_in'] = json_encode($data['school_wish_to_apply_in'] ?? []);
@@ -225,16 +257,6 @@ class EditApplication extends EditRecord
             $data['status'] = 'resubmitted';
         }
 
-        // If a new document is uploaded, set its status to 'pending'
-        if (!empty($data['documents']) && is_array($data['documents'])) {
-            foreach ($data['documents'] as &$doc) {
-                if (!empty($doc['new_document'])) {
-                    $doc['status'] = 'pending';
-                }
-            }
-            unset($doc);
-        }
-
         return $data;
     }
 
@@ -242,14 +264,46 @@ class EditApplication extends EditRecord
     {
         $record = $this->record;
 
-        // If the status is now 'resubmitted', notify admins
+        // Detect which documents had their file_path changed (i.e. user re-uploaded a file).
+        // Filament has already saved file_path via the relationship by this point.
+        $currentPaths = $record->documents()->pluck('file_path', 'id')->toArray();
+        $reuploadedIds = [];
+        foreach ($currentPaths as $id => $path) {
+            if (($this->originalDocumentFilePaths[$id] ?? null) !== $path) {
+                $reuploadedIds[] = $id;
+            }
+        }
+        $hadDocumentUploads = count($reuploadedIds) > 0;
+
+        // Reset status to 'pending' for re-uploaded documents
+        if ($hadDocumentUploads) {
+            Document::whereIn('id', $reuploadedIds)->update(['status' => 'pending']);
+        }
+
+        // Notify admins about the resubmission, mentioning document re-uploads if applicable
         if ($record->status === 'resubmitted') {
-            $admins = User::where('roles', 'admin')->get();
-            Notification::send($admins, new ApplicationStatusNotification(
+            $adminUrl = url('/admin/admin/applications/' . $record->id . '/edit');
+            $adminMessage = 'An application has been resubmitted by ' . optional($record->user)->name . '.';
+            if ($hadDocumentUploads) {
+                $adminMessage .= ' Corrected document(s) have been uploaded and require re-review.';
+            }
+
+            $adminEmails = self::adminEmails();
+
+            Notification::route('mail', $adminEmails)->notify(new ApplicationStatusNotification(
                 'Application Resubmitted',
-                'An application has been resubmitted by ' . optional($record->user)->name,
-                url('/admin/admin/applications/' . $record->id . '/edit')
+                $adminMessage,
+                $adminUrl
             ));
+        }
+
+        // Show a success notification to the user when documents were uploaded
+        if ($hadDocumentUploads) {
+            FilamentNotification::make()
+                ->title('Document uploaded successfully.')
+                ->body('Admin is reviewing your application.')
+                ->success()
+                ->send();
         }
     }
 }

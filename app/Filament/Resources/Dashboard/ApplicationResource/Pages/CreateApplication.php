@@ -8,11 +8,14 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\ApplicationStatusNotification;
 use App\Services\ApplicationService;
+use App\Traits\CommonTrait;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
 
 class CreateApplication extends CreateRecord
 {
+
+    use CommonTrait;
     protected static string $resource = ApplicationResource::class;
 
     protected static bool $canCreateAnother = false;
@@ -38,7 +41,7 @@ class CreateApplication extends CreateRecord
         $childrenNotApplying = $result['children_not_applying'] ?? 0;
 
         // Notify hardcoded admin emails
-        $adminEmails = ['bukhariancongres@gmail.com', 'alephagencyplus@gmail.com'];
+        $adminEmails = self::adminEmails();
 
         foreach ($applications as $application) {
             Notification::route('mail', $adminEmails)->notify(new ApplicationStatusNotification(
